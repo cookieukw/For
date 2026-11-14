@@ -122,6 +122,9 @@ pub struct Account {
     /// Ids of the starred messages of each chat, for the mark in the
     /// conversation. Filled when a chat opens and on every confirmed star.
     pub stars: HashMap<ChatId, HashSet<String>>,
+    /// Messages whose original contents were kept after their sender revoked
+    /// them for everyone.
+    pub recovered_messages: HashSet<(ChatId, String)>,
     /// Ids of each chat's pinned messages, for its menu and its bubble mark.
     pub pins: HashMap<ChatId, HashSet<String>>,
     /// Active pins of each chat, for the line under its header.
@@ -163,6 +166,9 @@ impl Account {
         backend: Backend,
     ) -> Self {
         let open_chat = settings.last_chat.clone();
+        if !settings.keep_deleted_messages {
+            backend.send(crate::backend::Command::SetKeepDeletedMessages(false));
+        }
         let chat_filter = match settings
             .list_filter
             .as_deref()
@@ -247,6 +253,7 @@ impl Account {
             starred: Vec::new(),
             show_starred: false,
             stars: HashMap::new(),
+            recovered_messages: HashSet::new(),
             pins: HashMap::new(),
             chat_pins: HashMap::new(),
             reply_when_loaded: None,

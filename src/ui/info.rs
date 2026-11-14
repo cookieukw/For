@@ -698,6 +698,10 @@ fn identity(app: &mut App, ui: &mut egui::Ui, shown: &Shown, overlay: bool) {
     ui.add_space(4.0);
     actions(app, ui, shown, mine, editable);
     ui.vertical_centered(|ui| super::blocking::button(app, ui, id, Stop::InfoControl(BLOCK_STOP)));
+    if !shown.group && !shown.channel && !mine && shown.has_chat {
+        ui.add_space(8.0);
+        ai_reply_settings(app, ui, id);
+    }
     let describing = app.group_description_edit.take().filter(|_| group_editable);
     if let Some(mut draft) = describing {
         ui.add_space(8.0);
@@ -718,7 +722,32 @@ fn identity(app: &mut App, ui: &mut egui::Ui, shown: &Shown, overlay: bool) {
         }
     } else if let Some(description) = shown.description.as_deref() {
         ui.add_space(8.0);
+        let description_id = egui::Id::new(("group-description-expanded", id));
+        let mut expanded = ui
+            .ctx()
+            .data(|data| data.get_temp::<bool>(description_id))
+            .unwrap_or(false);
         ui.horizontal(|ui| {
+            let toggle_label = if expanded {
+                crate::i18n::gettext(app.locale, "Hide description")
+            } else {
+                crate::i18n::gettext(app.locale, "Show description")
+            };
+            let toggle = theme::icon_button(
+                ui,
+                if expanded {
+                    Icon::ChevronDown
+                } else {
+                    Icon::ChevronRight
+                },
+                16.0,
+                palette.secondary,
+                palette.text,
+                &toggle_label,
+            );
+            if toggle.clicked() {
+                expanded = !expanded;
+            }
             theme::text(
                 ui,
                 crate::i18n::gettext(app.locale, "Description"),
@@ -740,22 +769,18 @@ fn identity(app: &mut App, ui: &mut egui::Ui, shown: &Shown, overlay: bool) {
                     .push(Action::EditGroupDescription(description.to_owned()));
             }
         });
-        ui.add_space(4.0);
-        // A long description scrolls in place, so the media and the members
-        // stay close under it.
-        egui::ScrollArea::vertical()
-            .id_salt("group-description")
-            .max_height(120.0)
-            .auto_shrink([false, true])
-            .show(ui, |ui| {
-                theme::selectable_text(ui, description, theme::regular(13.5), palette.text);
-            });
-    }
-    // A locked chat's media stays in the locked folder: the section is not
-    // there, rather than empty.
-    if app.info_media_allowed() {
-        ui.add_space(8.0);
-        media_row(app, ui, id, overlay);
+        ui.ctx()
+            .data_mut(|data| data.insert_temp(description_id, expanded));
+        if expanded {
+            ui.add_space(4.0);
+            egui::ScrollArea::vertical()
+                .id_salt(("group-description", id))
+                .max_height(120.0)
+                .auto_shrink([false, true])
+                .show(ui, |ui| {
+                    theme::selectable_text(ui, description, theme::regular(13.5), palette.text);
+                });
+        }
     }
     // Our own details, under either of our ids, share no groups with us.
     if !shown.group && !shown.channel && !app.our_ids().contains(&id) {
@@ -765,8 +790,12 @@ fn identity(app: &mut App, ui: &mut egui::Ui, shown: &Shown, overlay: bool) {
             common_groups(app, ui, id, &groups);
         }
     }
-    if shown.can_manage {
+    if shown.group && shown.members > 0 {
         ui.add_space(4.0);
+        members(app, ui, shown, window);
+    }
+    if shown.can_manage {
+        ui.add_space(8.0);
         let label = crate::i18n::gettext(app.locale, "Group permissions");
         let response = nav_row(app, ui, Icon::Shield, &label, PERMISSIONS_STOP);
         ui.ctx()
@@ -775,9 +804,12 @@ fn identity(app: &mut App, ui: &mut egui::Ui, shown: &Shown, overlay: bool) {
             app.actions.push(Action::ShowInfo(InfoView::Permissions));
         }
     }
-    if shown.group && shown.members > 0 {
+    // A locked chat's media stays in the locked folder: the section is not
+    // there, rather than empty. Members come first so the list is easier to
+    // reach without scrolling past the media shelf.
+    if app.info_media_allowed() {
         ui.add_space(8.0);
-        members(app, ui, shown, window, photo);
+        media_row(app, ui, id, overlay);
     }
     if shown.can_leave {
         ui.add_space(8.0);
@@ -798,6 +830,65 @@ fn identity(app: &mut App, ui: &mut egui::Ui, shown: &Shown, overlay: bool) {
     if leave {
         app.actions
             .push(Action::ShowDialog(Dialog::ConfirmLeaveGroup(id.to_owned())));
+    }
+}
+
+fn ai_reply_settings(app: &mut App, ui: &mut egui::Ui, chat: &str) {
+    let palette = app.palette;
+    let locale = app.locale;
+    let preference = app
+        .account()
+        .settings
+        .ai_chats
+        .get(chat)
+        .cloned()
+        .unwrap_or_default();
+    let mut enabled = preference.enabled;
+    let mut changed = false;
+    widgets::setting_row(
+        ui,
+        &palette,
+        &crate::i18n::gettext(locale, "Draft replies with AI"),
+        &crate::i18n::gettext(
+            locale,
+            "Only this contact. Uses the context configured in AI settings when requested. Nothing is sent automatically.",
+        ),
+        |ui| {
+            let response = widgets::switch(ui, &palette, &mut enabled);
+            theme::reveal_focus(&response);
+            changed = response.changed();
+        },
+    );
+    if changed {
+        app.actions.push(Action::SetAiChatEnabled {
+            chat: chat.to_owned(),
+            enabled,
+        });
+    }
+    if enabled {
+        ui.add_space(4.0);
+        let style_id = egui::Id::new(("local-ai-style", chat));
+        let mut style = ui
+            .ctx()
+            .data(|data| data.get_temp::<String>(style_id))
+            .unwrap_or_else(|| preference.style.clone());
+        let response = ui.add(
+            egui::TextEdit::multiline(&mut style)
+                .desired_rows(2)
+                .desired_width(ui.available_width())
+                .font(theme::regular(13.0))
+                .text_color(palette.text)
+                .hint_text(crate::i18n::gettext(locale, "How should the AI sound?")),
+        );
+        ui.ctx()
+            .data_mut(|data| data.insert_temp(style_id, style.clone()));
+        if response.lost_focus() && style != preference.style {
+            ui.ctx().data_mut(|data| data.remove::<String>(style_id));
+            app.actions.push(Action::SetAiChatStyle {
+                chat: chat.to_owned(),
+                style,
+            });
+        }
     }
 }
 
@@ -920,7 +1011,7 @@ fn actions(app: &mut App, ui: &mut egui::Ui, shown: &Shown, mine: bool, editable
 
 /// The group's members, each opening their own panel. They are sorted once
 /// per change of the chat list or the contacts, not every frame.
-fn members(app: &mut App, ui: &mut egui::Ui, shown: &Shown, window: f32, photo: f32) {
+fn members(app: &mut App, ui: &mut egui::Ui, shown: &Shown, window: f32) {
     let palette = app.palette;
     let id = shown.id.as_str();
     if app.info_members.as_ref().is_none_or(|(chat, _)| chat != id) {
@@ -936,10 +1027,26 @@ fn members(app: &mut App, ui: &mut egui::Ui, shown: &Shown, window: f32, photo: 
     };
     theme::text(
         ui,
-        format!("Members ({})", members.len()),
+        format!(
+            "{} ({})",
+            crate::i18n::gettext(app.locale, "Members"),
+            members.len()
+        ),
         theme::medium(12.5),
         palette.secondary,
     );
+    ui.add_space(4.0);
+    let search_id = egui::Id::new(("group-members-search", id));
+    let mut query = ui
+        .ctx()
+        .data(|data| data.get_temp::<String>(search_id))
+        .unwrap_or_default();
+    let hint = crate::i18n::gettext(app.locale, "Search members");
+    let search_width = ui.available_width();
+    widgets::search_field(ui, &palette, search_id, &mut query, &hint, search_width);
+    ui.ctx()
+        .data_mut(|data| data.insert_temp(search_id, query.clone()));
+    let matching = matching_members(&members, &query);
     ui.add_space(4.0);
     if shown.can_add {
         let label = crate::i18n::gettext(app.locale, "Add members");
@@ -963,149 +1070,189 @@ fn members(app: &mut App, ui: &mut egui::Ui, shown: &Shown, window: f32, photo: 
     let ours: Vec<&str> = ours.iter().map(String::as_str).collect();
     let locale = app.locale;
     let mut chosen: Option<(String, crate::group_admin::MemberChange)> = None;
-    // Limit the visible rows because groups can have thousands of members.
-    let row_height = 30.0;
-    let rows = ((window - photo - 300.0) / row_height)
-        .floor()
-        .clamp(2.0, 8.0);
+    let mut ignored_sender: Option<(String, bool)> = None;
+    // Keep the inner list roomy enough to scan, while letting the outer
+    // information panel scroll naturally on shorter windows.
+    let row_height = 32.0;
+    let max_height = (window * 0.42).clamp(row_height * 5.0, row_height * 12.0);
     let mut open = None;
     // `show_rows` reads the spacing from outside its closure.
     ui.spacing_mut().item_spacing.y = 0.0;
-    egui::ScrollArea::vertical()
-        .id_salt(("members", id))
-        .max_height(row_height * rows)
-        .auto_shrink([false, true])
-        .show_rows(ui, row_height, members.len(), |ui, range| {
-            for (member, name) in &members[range] {
-                let (rect, response) = ui.allocate_exact_size(
-                    egui::vec2(ui.available_width(), row_height),
-                    egui::Sense::click(),
-                );
-                response.widget_info(|| {
-                    egui::WidgetInfo::labeled(egui::WidgetType::Button, true, name)
-                });
-                let admin = roles.is_admin(member);
-                let changes = roles.changes(member, &ours);
-                // The menu's button sits at the row's end, over the row.
-                let more = (!changes.is_empty()).then(|| {
-                    let spot = Rect::from_center_size(
-                        pos2(rect.right() - 14.0, rect.center().y),
-                        Vec2::splat(24.0),
+    if matching.is_empty() {
+        theme::text(
+            ui,
+            crate::i18n::gettext(locale, "No members match that search."),
+            theme::regular(12.5),
+            palette.secondary,
+        );
+    } else {
+        egui::ScrollArea::vertical()
+            .id_salt(("members", id))
+            .max_height(max_height)
+            .auto_shrink([false, true])
+            .show_rows(ui, row_height, matching.len(), |ui, range| {
+                for (member, name) in &matching[range] {
+                    let (rect, response) = ui.allocate_exact_size(
+                        egui::vec2(ui.available_width(), row_height),
+                        egui::Sense::click(),
                     );
-                    let more = ui
-                        .interact(spot, ui.id().with(("member-menu", member)), Sense::click())
-                        .on_hover_cursor(egui::CursorIcon::PointingHand);
-                    let label =
-                        crate::i18n::gettext(locale, "Options for {name}").replace("{name}", name);
-                    more.widget_info(|| {
-                        egui::WidgetInfo::labeled(egui::WidgetType::Button, true, &label)
+                    response.widget_info(|| {
+                        egui::WidgetInfo::labeled(egui::WidgetType::Button, true, name)
                     });
-                    #[cfg(any(test, feature = "demo"))]
-                    {
-                        ui.ctx()
-                            .data_mut(|data| data.insert_temp(member_menu_id(member), spot));
-                        if app.open_member_menu.as_deref() == Some(member.as_str()) {
-                            egui::Popup::open_id(ui.ctx(), more.id.with("popup"));
+                    let admin = roles.is_admin(member);
+                    let changes = roles.changes(member, &ours);
+                    let can_ignore =
+                        app.info_media_allowed() && can_ignore_group_member(member, &ours);
+                    let ignored = app.ignored_group_sender(id, member);
+                    // Every other member has a local, per-group ignore action.
+                    // Admin actions remain available in the same menu.
+                    let more = (!changes.is_empty() || can_ignore).then(|| {
+                        let spot = Rect::from_center_size(
+                            pos2(rect.right() - 14.0, rect.center().y),
+                            Vec2::splat(24.0),
+                        );
+                        let more = ui
+                            .interact(spot, ui.id().with(("member-menu", member)), Sense::click())
+                            .on_hover_cursor(egui::CursorIcon::PointingHand);
+                        let label = crate::i18n::gettext(locale, "Options for {name}")
+                            .replace("{name}", name);
+                        more.widget_info(|| {
+                            egui::WidgetInfo::labeled(egui::WidgetType::Button, true, &label)
+                        });
+                        #[cfg(any(test, feature = "demo"))]
+                        {
+                            ui.ctx()
+                                .data_mut(|data| data.insert_temp(member_menu_id(member), spot));
+                            if app.open_member_menu.as_deref() == Some(member.as_str()) {
+                                egui::Popup::open_id(ui.ctx(), more.id.with("popup"));
+                            }
                         }
-                    }
-                    more
-                });
-                if ui.is_rect_visible(rect) {
-                    if response.hovered() {
-                        ui.painter().rect_filled(rect, 6.0, palette.surface_hover);
-                    }
-                    let picture = app.avatar(member);
-                    let avatar = egui::Rect::from_center_size(
-                        egui::pos2(rect.left() + 16.0, rect.center().y),
-                        egui::Vec2::splat(24.0),
-                    );
-                    widgets::paint_avatar(
-                        ui,
-                        &palette,
-                        avatar,
-                        name.trim_start_matches('~'),
-                        member,
-                        picture.as_deref(),
-                    );
-                    // The end of the row: the admin tag and the menu button.
-                    let mut end = rect.right() - 4.0;
-                    if let Some(more) = &more {
-                        let color = if more.hovered() {
-                            palette.text
-                        } else {
-                            palette.secondary
-                        };
-                        if more.hovered() {
-                            ui.painter().circle_filled(
-                                more.rect.center(),
-                                12.0,
-                                palette.surface_active,
-                            );
+                        more
+                    });
+                    if ui.is_rect_visible(rect) {
+                        if response.hovered() {
+                            ui.painter().rect_filled(rect, 6.0, palette.surface_hover);
                         }
-                        theme::paint_icon(ui, Icon::Ellipsis, more.rect, 16.0, color);
-                        end = more.rect.left() - 4.0;
-                    }
-                    if admin {
-                        let tag = widgets::line(
+                        let picture = app.avatar(member);
+                        let avatar = egui::Rect::from_center_size(
+                            egui::pos2(rect.left() + 16.0, rect.center().y),
+                            egui::Vec2::splat(24.0),
+                        );
+                        widgets::paint_avatar(
                             ui,
-                            &crate::i18n::gettext(locale, "Group admin"),
-                            theme::regular(11.5),
-                            palette.accent,
-                            90.0,
+                            &palette,
+                            avatar,
+                            name.trim_start_matches('~'),
+                            member,
+                            picture.as_deref(),
+                        );
+                        // The end of the row: the admin tag and the menu button.
+                        let mut end = rect.right() - 4.0;
+                        if let Some(more) = &more {
+                            let color = if more.hovered() {
+                                palette.text
+                            } else {
+                                palette.secondary
+                            };
+                            if more.hovered() {
+                                ui.painter().circle_filled(
+                                    more.rect.center(),
+                                    12.0,
+                                    palette.surface_active,
+                                );
+                            }
+                            theme::paint_icon(ui, Icon::Ellipsis, more.rect, 16.0, color);
+                            end = more.rect.left() - 4.0;
+                        }
+                        if admin {
+                            let tag = widgets::line(
+                                ui,
+                                &crate::i18n::gettext(locale, "Group admin"),
+                                theme::regular(11.5),
+                                palette.accent,
+                                90.0,
+                                1,
+                            );
+                            let pill = Rect::from_min_size(
+                                pos2(
+                                    end - tag.size().x - 12.0,
+                                    rect.center().y - tag.size().y / 2.0 - 2.0,
+                                ),
+                                tag.size() + vec2(12.0, 4.0),
+                            );
+                            ui.painter().rect_filled(
+                                pill,
+                                6.0,
+                                palette.accent.gamma_multiply(0.14),
+                            );
+                            tag.paint(ui, pill.min + vec2(6.0, 2.0), palette.accent);
+                            end = pill.left() - 6.0;
+                        }
+                        let line = widgets::line(
+                            ui,
+                            name,
+                            theme::regular(13.0),
+                            palette.text,
+                            (end - rect.left() - 34.0).max(20.0),
                             1,
                         );
-                        let pill = Rect::from_min_size(
-                            pos2(
-                                end - tag.size().x - 12.0,
-                                rect.center().y - tag.size().y / 2.0 - 2.0,
-                            ),
-                            tag.size() + vec2(12.0, 4.0),
+                        line.paint(
+                            ui,
+                            egui::pos2(rect.left() + 34.0, rect.center().y - line.size().y / 2.0),
+                            palette.text,
                         );
-                        ui.painter()
-                            .rect_filled(pill, 6.0, palette.accent.gamma_multiply(0.14));
-                        tag.paint(ui, pill.min + vec2(6.0, 2.0), palette.accent);
-                        end = pill.left() - 6.0;
                     }
-                    let line = widgets::line(
-                        ui,
-                        name,
-                        theme::regular(13.0),
-                        palette.text,
-                        (end - rect.left() - 34.0).max(20.0),
-                        1,
-                    );
-                    line.paint(
-                        ui,
-                        egui::pos2(rect.left() + 34.0, rect.center().y - line.size().y / 2.0),
-                        palette.text,
-                    );
-                }
-                // The menu opens from its button or a right-click on the row.
-                if let Some(more) = &more {
-                    let width = member_menu_width(ui, locale, &changes);
-                    for popup in [
-                        egui::Popup::menu(more),
-                        egui::Popup::context_menu(&response),
-                    ] {
-                        popup
-                            .width(width)
-                            .frame(widgets::menu_frame(&palette))
-                            .show(|ui| {
-                                if let Some(change) = member_menu(ui, &palette, locale, &changes) {
-                                    chosen = Some((member.clone(), change));
-                                    ui.close();
-                                }
-                            });
+                    // The menu opens from its button or a right-click on the row.
+                    if let Some(more) = &more {
+                        let ignore_label = if ignored {
+                            crate::i18n::gettext(locale, "Stop ignoring in this group")
+                        } else {
+                            crate::i18n::gettext(locale, "Ignore in this group")
+                        };
+                        let ignore_width = widgets::menu_width(ui, &[ignore_label.as_ref()], true);
+                        let width = member_menu_width(ui, locale, &changes).max(ignore_width);
+                        for popup in [
+                            egui::Popup::menu(more),
+                            egui::Popup::context_menu(&response),
+                        ] {
+                            popup
+                                .width(width)
+                                .frame(widgets::menu_frame(&palette))
+                                .show(|ui| {
+                                    if let Some(change) =
+                                        member_menu(ui, &palette, locale, &changes)
+                                    {
+                                        chosen = Some((member.clone(), change));
+                                        ui.close();
+                                    }
+                                    if can_ignore {
+                                        if !changes.is_empty() {
+                                            widgets::menu_separator(ui, &palette);
+                                        }
+                                        if widgets::menu_item(
+                                            ui,
+                                            &palette,
+                                            Some(Icon::EyeOff),
+                                            &ignore_label,
+                                        ) {
+                                            ignored_sender = Some((member.clone(), !ignored));
+                                            ui.close();
+                                        }
+                                    }
+                                });
+                        }
+                    }
+                    let menu_clicked = more.as_ref().is_some_and(|response| response.clicked());
+                    if response
+                        .on_hover_cursor(egui::CursorIcon::PointingHand)
+                        .clicked()
+                        && !menu_clicked
+                    {
+                        open = Some(member.clone());
                     }
                 }
-                if response
-                    .on_hover_cursor(egui::CursorIcon::PointingHand)
-                    .clicked()
-                {
-                    open = Some(member.clone());
-                }
-            }
-        });
+            });
+    }
     app.info_members = Some((id.to_owned(), members));
     if let Some((member, change)) = chosen {
         app.actions.push(match change {
@@ -1122,11 +1269,30 @@ fn members(app: &mut App, ui: &mut egui::Ui, shown: &Shown, window: f32, photo: 
             },
         });
     }
+    if let Some((sender, ignored)) = ignored_sender {
+        app.actions.push(Action::SetGroupSenderIgnored {
+            chat: id.to_owned(),
+            sender,
+            ignored,
+        });
+    }
     if let Some(member) = open
         && Some(member.as_str()) != app.me.as_deref()
     {
         app.actions.push(Action::OpenInfo(member));
     }
+}
+
+fn matching_members(members: &[(String, String)], query: &str) -> Vec<(String, String)> {
+    let needle = crate::util::search_key(query.trim());
+    members
+        .iter()
+        .filter(|(member, name)| {
+            needle.is_empty()
+                || crate::util::search_key(&format!("{name} {member}")).contains(&needle)
+        })
+        .cloned()
+        .collect()
 }
 
 /// The groups `person` shares with us, by name, as `(id, name)`: those whose
@@ -1987,6 +2153,10 @@ fn member_menu_item(
     }
 }
 
+fn can_ignore_group_member(member: &str, ours: &[&str]) -> bool {
+    !ours.contains(&member)
+}
+
 fn member_menu_width(
     ui: &egui::Ui,
     locale: crate::i18n::Locale,
@@ -2395,6 +2565,32 @@ mod tests {
         };
         assert_eq!(shown, path);
         assert!(chat.is_empty() && message.is_empty() && card.is_none());
+    }
+
+    #[test]
+    fn the_group_member_options_include_ignore_but_not_our_own_row() {
+        let ours = ["15550001111@s.whatsapp.net"];
+        assert!(super::can_ignore_group_member("1@s.whatsapp.net", &ours));
+        assert!(!super::can_ignore_group_member(ours[0], &ours));
+    }
+
+    #[test]
+    fn member_search_matches_names_and_numbers_without_case_or_diacritic_sensitivity() {
+        let members = vec![
+            ("1@s.whatsapp.net".to_owned(), "~França Piscinas".to_owned()),
+            (
+                "15550002222@s.whatsapp.net".to_owned(),
+                "Gleidy Clementino".to_owned(),
+            ),
+        ];
+        assert_eq!(
+            super::matching_members(&members, "franca"),
+            vec![members[0].clone()]
+        );
+        assert_eq!(
+            super::matching_members(&members, "2222"),
+            vec![members[1].clone()]
+        );
     }
 
     use super::domain;

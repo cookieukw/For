@@ -151,6 +151,40 @@ fn platform_store() -> Result<std::sync::Arc<dyn CredentialStoreApi>> {
         as std::sync::Arc<dyn CredentialStoreApi>)
 }
 
+/// Stores one AI-provider credential separately from settings files.
+pub(super) fn store_ai_key(provider: &str, value: &str) -> Result<()> {
+    let entry = platform_store()?
+        .build("rocks.zapfast.ZapFast", &format!("ai-{provider}"), None)
+        .map_err(keyring_error)?;
+    if value.trim().is_empty() {
+        match entry.delete_credential() {
+            Ok(()) | Err(keyring_core::Error::NoEntry) => Ok(()),
+            Err(error) => Err(keyring_error(error)),
+        }
+    } else {
+        entry
+            .set_secret(value.trim().as_bytes())
+            .map_err(keyring_error)
+    }
+}
+
+/// Reads one AI-provider credential from the OS keyring.
+pub(super) fn ai_key(provider: &str) -> Result<Option<Zeroizing<String>>> {
+    let entry = platform_store()?
+        .build("rocks.zapfast.ZapFast", &format!("ai-{provider}"), None)
+        .map_err(keyring_error)?;
+    match entry.get_secret() {
+        Ok(secret) => {
+            let secret = Zeroizing::new(secret);
+            let value = String::from_utf8(secret.to_vec())
+                .map_err(|error| anyhow::anyhow!("The local AI key is not valid UTF-8: {error}"))?;
+            Ok(Some(Zeroizing::new(value)))
+        }
+        Err(keyring_core::Error::NoEntry) => Ok(None),
+        Err(error) => Err(keyring_error(error)),
+    }
+}
+
 fn key_from_entry(path: &Path, entry: &keyring_core::Entry) -> Result<Zeroizing<[u8; 32]>> {
     match entry.get_secret() {
         Ok(secret) => {

@@ -215,7 +215,17 @@ fn direct(app: &App, ui: &mut egui::Ui, message: &Message) {
         ui.add_space(4.0);
         ui.horizontal(|ui| {
             let (rect, _) = ui.allocate_exact_size(vec2(18.0, 18.0), Sense::hover());
-            theme::paint_icon(ui, Icon::DeliveryTicks, rect, 18.0, color);
+            theme::paint_icon(
+                ui,
+                if delivery == Delivery::Played {
+                    Icon::Volume2
+                } else {
+                    Icon::DeliveryTicks
+                },
+                rect,
+                18.0,
+                color,
+            );
             ui.vertical(|ui| {
                 ui.spacing_mut().item_spacing.y = 2.0;
                 theme::text(ui, label, theme::medium(14.0), palette.text);

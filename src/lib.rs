@@ -2,6 +2,7 @@
 
 pub mod a11y;
 pub mod account;
+pub mod ai;
 pub mod animation;
 pub mod announcer;
 pub mod app;

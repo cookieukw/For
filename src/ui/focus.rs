@@ -10,6 +10,7 @@ pub enum Stop {
     ViewOnce,
     Send,
     Attach,
+    AiDraft,
     Emoji,
     /// Staged-file review: the file strip and its controls.
     ReviewFile(usize),

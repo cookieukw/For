@@ -395,13 +395,13 @@ pub fn paint_disappearing_badge(ui: &Ui, palette: &Palette, avatar: Rect) {
     theme::paint_icon(ui, Icon::Timer, rect, size, palette.accent);
 }
 
-/// Outgoing-message status ticks.
+/// Outgoing-message status mark.
 pub fn ticks(ui: &Ui, palette: &Palette, rect: Rect, status: Delivery) {
     ticks_in(ui, palette, rect, status, palette.secondary);
 }
 
-/// Status ticks with `plain` for the states that are not read or failed,
-/// for ticks drawn over a picture.
+/// Status mark with `plain` for states that are not read or failed, for marks
+/// drawn over a picture.
 pub fn ticks_in(ui: &Ui, palette: &Palette, rect: Rect, status: Delivery, plain: Color32) {
     let Some(icon) = tick_icon(status) else {
         return;
@@ -421,7 +421,8 @@ pub fn tick_icon(status: Delivery) -> Option<Icon> {
         Delivery::None => return None,
         Delivery::Pending => Icon::Clock,
         Delivery::Sent => Icon::DeliveryTick,
-        Delivery::Delivered | Delivery::Read | Delivery::Played => Icon::DeliveryTicks,
+        Delivery::Delivered | Delivery::Read => Icon::DeliveryTicks,
+        Delivery::Played => Icon::Volume2,
         Delivery::Failed => Icon::CircleAlert,
     })
 }
@@ -2466,14 +2467,15 @@ mod tests {
         assert_eq!(reach(&below, |v| v.pos.y), reach(&beside, |v| v.pos.x));
     }
 
-    /// Sent shows one tick and delivered or read two, drawn from our own
-    /// glyphs, where the second tick reaches as high as the first (#249).
+    /// Sent shows one tick, delivered/read show two, and played is distinct
+    /// so a voice message's playback receipt is visible without opening info.
     #[test]
     fn delivery_ticks_are_our_own_equal_height_glyphs() {
         assert_eq!(tick_icon(Delivery::Sent), Some(Icon::DeliveryTick));
-        for status in [Delivery::Delivered, Delivery::Read, Delivery::Played] {
+        for status in [Delivery::Delivered, Delivery::Read] {
             assert_eq!(tick_icon(status), Some(Icon::DeliveryTicks));
         }
+        assert_eq!(tick_icon(Delivery::Played), Some(Icon::Volume2));
         assert_eq!(tick_icon(Delivery::None), None);
         let svg = include_str!("../../assets/icons/delivery-ticks.svg");
         let tops: Vec<(f32, f32)> = svg

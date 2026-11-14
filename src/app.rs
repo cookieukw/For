@@ -848,6 +848,17 @@ pub struct App {
     /// What the Settings page is filtered by.
     pub settings_search: String,
     pub focus_settings_search: bool,
+    /// Models discovered from the selected provider.
+    pub ai_models: Vec<String>,
+    pub ai_models_provider: Option<crate::ai::AiProvider>,
+    pub ai_models_pending: Option<u64>,
+    pub ai_key_saved: Option<(crate::ai::AiProvider, bool)>,
+    pub ai_key_save_pending: Option<crate::ai::AiProvider>,
+    ai_request_sequence: u64,
+    ai_reply_pending: Option<(u64, Option<ChatId>)>,
+    pub ai_suggestion: Option<(ChatId, String)>,
+    pub ai_simulator_message: String,
+    pub ai_simulator_reply: Option<String>,
     pub quit_requested: bool,
     pub window_focused: bool,
     /// A notification went out this frame: highlight the taskbar entry of a
@@ -1746,6 +1757,16 @@ impl App {
             focus_search: false,
             settings_search: String::new(),
             focus_settings_search: false,
+            ai_models: Vec::new(),
+            ai_models_provider: None,
+            ai_models_pending: None,
+            ai_key_saved: None,
+            ai_key_save_pending: None,
+            ai_request_sequence: 0,
+            ai_reply_pending: None,
+            ai_suggestion: None,
+            ai_simulator_message: "Oi! Como foi seu dia?".into(),
+            ai_simulator_reply: None,
             quit_requested: false,
             window_focused: false,
             wants_attention: false,
@@ -2522,6 +2543,12 @@ impl App {
         let Some(chat) = self.chat(chat_id) else {
             return;
         };
+        if chat.is_channel() && !self.account().settings.channel_notifications {
+            return;
+        }
+        if self.ignored_group_sender(chat_id, &message.sender) {
+            return;
+        }
         let now = crate::util::now();
         if !notification_eligible(chat, now, message.timestamp) {
             return;
@@ -2596,6 +2623,133 @@ impl App {
             limited,
         );
         self.wants_attention = true;
+    }
+
+    pub(crate) fn ignored_group_sender(&self, chat: &str, sender: &str) -> bool {
+        self.chat(chat).is_some_and(|chat_row| chat_row.is_group())
+            && self
+                .account()
+                .settings
+                .ignored_group_senders
+                .get(chat)
+                .is_some_and(|senders| senders.iter().any(|known| known == sender))
+    }
+
+    fn refresh_ai_models(&mut self) {
+        self.ai_request_sequence = self.ai_request_sequence.wrapping_add(1);
+        let request = self.ai_request_sequence;
+        self.ai_models_pending = Some(request);
+        let provider = self.settings.ai_provider;
+        self.ai_models_provider = Some(provider);
+        self.backend.send(Command::ListAiModels {
+            request,
+            provider,
+            endpoint: self.settings.ai_endpoint.clone(),
+        });
+    }
+
+    pub(crate) fn ai_simulator_pending(&self) -> bool {
+        self.ai_reply_pending
+            .as_ref()
+            .is_some_and(|(_, chat)| chat.is_none())
+    }
+
+    pub(crate) fn ai_draft_pending_for(&self, chat: &str) -> bool {
+        self.ai_reply_pending
+            .as_ref()
+            .is_some_and(|(_, target)| target.as_deref() == Some(chat))
+    }
+
+    fn request_ai_draft(
+        &mut self,
+        chat: Option<ChatId>,
+        message_id: Option<String>,
+        message: String,
+        style: String,
+    ) {
+        if self.settings.ai_model.trim().is_empty() {
+            self.toast(crate::i18n::gettext(
+                self.locale,
+                "Choose a model in AI settings.",
+            ));
+            return;
+        }
+        self.ai_request_sequence = self.ai_request_sequence.wrapping_add(1);
+        let request = self.ai_request_sequence;
+        self.ai_reply_pending = Some((request, chat.clone()));
+        let context_messages = if chat.is_some() {
+            self.settings
+                .ai_context_messages
+                .map(|count| count.clamp(1, 100_000))
+        } else {
+            Some(1)
+        };
+        self.backend
+            .send(Command::DraftAiReply(crate::ai::DraftRequest {
+                request,
+                chat,
+                provider: self.settings.ai_provider,
+                endpoint: self.settings.ai_endpoint.clone(),
+                model: self.settings.ai_model.clone(),
+                style,
+                message: crate::ai::Prompt::new(message),
+                message_id,
+                context_messages,
+            }));
+    }
+
+    fn draft_ai_reply(&mut self, chat: ChatId) {
+        let Some(chat_row) = self.chat(&chat) else {
+            return;
+        };
+        if chat_row.is_group() || chat_row.is_channel() {
+            return;
+        }
+        let Some(preference) = self.account().settings.ai_chats.get(&chat) else {
+            return;
+        };
+        if !preference.enabled {
+            return;
+        }
+        let style = preference.style.clone();
+        let message = self
+            .conversations
+            .get(&chat)
+            .and_then(|conversation| {
+                conversation.messages.iter().rev().find(|message| {
+                    !message.from_me && !matches!(message.content, Content::Revoked)
+                })
+            })
+            .map(|message| {
+                let text = match &message.content {
+                    Content::Text { text, .. } | Content::Interactive { text, .. } => text.clone(),
+                    Content::Image {
+                        caption: Some(text),
+                        ..
+                    }
+                    | Content::Video {
+                        caption: Some(text),
+                        ..
+                    }
+                    | Content::Document {
+                        caption: Some(text),
+                        ..
+                    } => text.clone(),
+                    Content::Document { file_name, .. } => file_name.clone(),
+                    content => content.summary_in(self.locale),
+                };
+                (message.id.clone(), text)
+            });
+        let Some((message_id, message)) = message.filter(|(_, message)| !message.trim().is_empty())
+        else {
+            self.toast(crate::i18n::gettext(
+                self.locale,
+                "There is no incoming message to answer yet.",
+            ));
+            return;
+        };
+        self.ai_suggestion = None;
+        self.request_ai_draft(Some(chat), Some(message_id), message, style);
     }
 
     /// Announces a message while the app lock is on, or with notification
@@ -4172,6 +4326,96 @@ impl App {
                     }
                 }
             }
+            Event::RecoveredMessage {
+                chat,
+                message,
+                recovered,
+            } => {
+                let marker = (chat, message);
+                let recovered_messages = &mut self.account_mut().recovered_messages;
+                if recovered {
+                    recovered_messages.insert(marker);
+                } else {
+                    recovered_messages.remove(&marker);
+                }
+            }
+            Event::AiKeySaved {
+                provider,
+                saved,
+                result,
+            } => {
+                self.ai_key_save_pending = None;
+                if result.is_ok() {
+                    self.ai_key_saved = Some((provider, saved));
+                }
+                if let Err(error) = result {
+                    self.toast_error(error);
+                }
+            }
+            Event::AiModels {
+                provider,
+                request,
+                models,
+            } => {
+                if self.ai_models_pending != Some(request)
+                    || self.ai_models_provider != Some(provider)
+                {
+                    return;
+                }
+                self.ai_models_pending = None;
+                match models {
+                    Ok(models) => {
+                        if self.settings.ai_model.is_empty()
+                            && let Some(model) = models.first()
+                        {
+                            self.settings.ai_model.clone_from(model);
+                            self.mark_settings_dirty();
+                        }
+                        self.ai_models = models;
+                    }
+                    Err(error) => self.toast_error(error),
+                }
+            }
+            Event::AiDraft {
+                request,
+                chat,
+                result,
+            } => {
+                if !self
+                    .ai_reply_pending
+                    .as_ref()
+                    .is_some_and(|(pending, target)| *pending == request && target == &chat)
+                {
+                    return;
+                }
+                self.ai_reply_pending = None;
+                match result.0 {
+                    Ok(reply) => match chat {
+                        Some(chat)
+                            if self
+                                .account()
+                                .settings
+                                .ai_chats
+                                .get(&chat)
+                                .is_some_and(|settings| settings.enabled) =>
+                        {
+                            // Keep the result in a visible review strip instead of
+                            // silently inserting it into the text field. This keeps
+                            // the user's current composer untouched and makes the
+                            // suggestion discoverable even when the chat changed
+                            // while the provider was working.
+                            self.ai_suggestion = Some((chat, reply));
+                            self.toast(crate::i18n::gettext(
+                                self.locale,
+                                "AI draft ready to review above the composer.",
+                            ));
+                        }
+                        Some(_) => {}
+                        None => self.ai_simulator_reply = Some(reply),
+                    },
+                    Err(error) => self.toast_error(error),
+                }
+            }
             Event::MessageUpdated(message) => {
                 let message = *message;
                 // The starred panel holds its own copy. An edit has to
@@ -4381,6 +4625,9 @@ impl App {
                 }
             }
             Event::MessageDeleted { chat, id } => {
+                self.account_mut()
+                    .recovered_messages
+                    .remove(&(chat.clone(), id.clone()));
                 // The current message deleted, the list's cursor goes to the
                 // one after it, or before it when it was the newest, so the
                 // reader stays where they were rather than at the newest.
@@ -5135,6 +5382,7 @@ impl App {
                 if live {
                     self.invalidate_composer_undo();
                 }
+                self.account_mut().recovered_messages.clear();
                 // Account-scoped lookup results are discarded by the worker.
                 // End their UI requests too, so a later account can retry.
                 self.new_contact_request = None;
@@ -6139,6 +6387,7 @@ impl App {
         self.backend.send(Command::MarkRead {
             chat: chat.to_owned(),
             receipts: self.account().settings.send_read_receipts,
+            defer_receipts: self.account().settings.defer_read_receipts_until_send,
         });
     }
 
@@ -8080,6 +8329,19 @@ impl App {
                     });
                     self.dialog = Some(Dialog::JoinGroup);
                     self.backend.send(Command::PreviewInvite(code));
+                } else if let Some(request) = crate::target::parse(&url) {
+                    let chat = request.chat.clone();
+                    self.apply(
+                        Action::StartChat {
+                            id: chat.clone(),
+                            name: request.display_name(),
+                            dismiss_dialog: true,
+                        },
+                        ctx,
+                    );
+                    if let Some(text) = request.text {
+                        self.apply(Action::PrefillComposer { chat, text }, ctx);
+                    }
                 } else if let Some(url) = crate::safety::external_url(&url) {
                     ctx.open_url(egui::OpenUrl::new_tab(url));
                 } else {
@@ -10092,6 +10354,97 @@ impl App {
                     account.mark_settings_dirty();
                 }
             }
+            Action::SetGroupSenderIgnored {
+                chat,
+                sender,
+                ignored,
+            } => {
+                let account = self.account_mut();
+                let senders = account
+                    .settings
+                    .ignored_group_senders
+                    .entry(chat.clone())
+                    .or_default();
+                if ignored {
+                    if !senders.contains(&sender) {
+                        senders.push(sender);
+                    }
+                } else {
+                    senders.retain(|known| known != &sender);
+                    if senders.is_empty() {
+                        account.settings.ignored_group_senders.remove(&chat);
+                    }
+                }
+                account.mark_settings_dirty();
+                let ignored: HashSet<(String, String)> = self
+                    .account()
+                    .settings
+                    .ignored_group_senders
+                    .iter()
+                    .flat_map(|(group, senders)| {
+                        senders
+                            .iter()
+                            .map(move |sender| (group.clone(), sender.clone()))
+                    })
+                    .collect();
+                self.chat_search_hits.retain(|message| {
+                    !ignored.contains(&(message.chat.clone(), message.sender.clone()))
+                });
+                self.chat_search_selected = None;
+            }
+            Action::SetAiChatEnabled { chat, enabled } => {
+                if let Some(chat_row) = self.chat(&chat)
+                    && (chat_row.is_group() || chat_row.is_channel())
+                {
+                    return;
+                }
+                self.account_mut()
+                    .settings
+                    .ai_chats
+                    .entry(chat)
+                    .or_default()
+                    .enabled = enabled;
+                self.account_mut().mark_settings_dirty();
+            }
+            Action::SetAiChatStyle { chat, style } => {
+                if let Some(chat_row) = self.chat(&chat)
+                    && (chat_row.is_group() || chat_row.is_channel())
+                {
+                    return;
+                }
+                self.account_mut()
+                    .settings
+                    .ai_chats
+                    .entry(chat)
+                    .or_default()
+                    .style = style;
+                self.account_mut().mark_settings_dirty();
+            }
+            Action::DraftAiReply(chat) => self.draft_ai_reply(chat),
+            Action::RefreshAiModels => self.refresh_ai_models(),
+            Action::SetAiContextMessages(count) => {
+                self.settings.ai_context_messages = count.map(|value| value.clamp(1, 100_000));
+                self.mark_settings_dirty();
+            }
+            Action::TestAiSimulator => {
+                let message = self.ai_simulator_message.clone();
+                self.ai_simulator_reply = None;
+                self.request_ai_draft(None, None, message, String::new());
+            }
+            Action::UseAiSuggestion => {
+                if let Some((chat, suggestion)) = self.ai_suggestion.take()
+                    && self.open_chat.as_deref() == Some(chat.as_str())
+                {
+                    if self.composer.trim().is_empty() {
+                        self.composer = suggestion;
+                    } else {
+                        self.composer.push('\n');
+                        self.composer.push_str(&suggestion);
+                    }
+                    self.focus_composer = true;
+                }
+            }
+            Action::DiscardAiSuggestion => self.ai_suggestion = None,
         }
     }
 
@@ -20581,6 +20934,120 @@ mod tests {
         }
     }
 
+    #[test]
+    fn local_ai_draft_uses_only_the_latest_message_for_an_enabled_direct_chat() {
+        let root = tempfile::tempdir().unwrap();
+        let (mut app, _) = App::headless(AppDirs::under(root.path()), Settings::default());
+        let (backend, mut commands) = Backend::recording();
+        app.backend = backend;
+        let chat = "15550001111@s.whatsapp.net";
+        app.chats = vec![Chat::new(chat.into(), "Ada".into())];
+        let mut older = message(chat, "older", 10);
+        older.content = Content::text("Old context must not be included");
+        let mut latest = message(chat, "latest", 20);
+        latest.content = Content::text("The selected message only");
+        app.conversations
+            .entry(chat.into())
+            .or_default()
+            .merge(vec![older, latest], false);
+        app.account_mut().settings.ai_chats.insert(
+            chat.into(),
+            crate::settings::AiChatSettings {
+                enabled: true,
+                style: "Warm and concise".into(),
+            },
+        );
+        app.settings.ai_model = "local-fixture".into();
+        app.settings.ai_context_messages = Some(3);
+
+        app.draft_ai_reply(chat.into());
+
+        assert!(matches!(
+            commands.try_recv().unwrap(),
+            Command::DraftAiReply(request)
+                if request.chat.as_deref() == Some(chat)
+                    && request.model == "local-fixture"
+                    && request.style == "Warm and concise"
+                    && request.message_id.as_deref() == Some("latest")
+                    && request.context_messages == Some(3)
+                    && request.message.messages().last().is_some_and(|message| {
+                        message.role == crate::ai::PromptRole::User
+                            && message.content == "The selected message only"
+                    })
+        ));
+        let group = "123-456@g.us";
+        app.chats.push(Chat::new(group.into(), "Group".into()));
+        app.account_mut().settings.ai_chats.insert(
+            group.into(),
+            crate::settings::AiChatSettings {
+                enabled: true,
+                style: String::new(),
+            },
+        );
+        app.draft_ai_reply(group.into());
+        assert!(
+            commands.try_recv().is_err(),
+            "group drafts are never requested"
+        );
+    }
+
+    #[test]
+    fn completed_ai_draft_stays_visible_for_review_without_replacing_composer_text() {
+        let mut app = app();
+        let chat = "15550001111@s.whatsapp.net";
+        app.chats = vec![Chat::new(chat.into(), "Ada".into())];
+        app.open_chat = Some(chat.into());
+        app.composer = "My unsent text".into();
+        app.account_mut().settings.ai_chats.insert(
+            chat.into(),
+            crate::settings::AiChatSettings {
+                enabled: true,
+                style: String::new(),
+            },
+        );
+        app.ai_reply_pending = Some((7, Some(chat.into())));
+        assert!(app.ai_draft_pending_for(chat));
+
+        app.apply_backend_event(
+            Event::AiDraft {
+                request: 7,
+                chat: Some(chat.into()),
+                result: crate::ai::DraftResult(Ok("Suggested response".into())),
+            },
+            true,
+        );
+
+        assert_eq!(app.composer, "My unsent text");
+        assert_eq!(
+            app.ai_suggestion,
+            Some((chat.into(), "Suggested response".into()))
+        );
+        assert!(app.ai_reply_pending.is_none());
+        assert!(!app.ai_draft_pending_for(chat));
+    }
+
+    #[test]
+    fn ai_simulator_uses_only_its_synthetic_text_not_conversation_context() {
+        let mut app = app();
+        let (backend, mut commands) = Backend::recording();
+        app.backend = backend;
+        app.settings.ai_model = "fixture-model".into();
+        app.settings.ai_context_messages = None;
+        app.ai_simulator_message = "Synthetic test message".into();
+
+        app.apply(Action::TestAiSimulator, &egui::Context::default());
+
+        assert!(matches!(
+            commands.try_recv().unwrap(),
+            Command::DraftAiReply(request)
+                if request.chat.is_none()
+                    && request.message_id.is_none()
+                    && request.context_messages == Some(1)
+                    && request.message.messages().len() == 1
+                    && request.message.messages()[0].content == "Synthetic test message"
+        ));
+    }
+
     /// Settings measures the account's media cache as it opens; Clear empties
     /// that account's cache, and the files on screen that lived there are
     /// forgotten so they download again. An older measurement is dropped.
@@ -26566,6 +27033,22 @@ mod app_lock_tests {
         assert_eq!(app.composer, "Invoice 123 is attached");
     }
 
+    #[test]
+    fn a_wa_me_link_from_the_app_opens_its_chat_instead_of_a_browser() {
+        let ctx = egui::Context::default();
+        let mut app = unlocked_app();
+
+        app.apply(
+            Action::OpenUrl("https://wa.me/15550001111?text=Hello%20there".into()),
+            &ctx,
+        );
+
+        let chat = "15550001111@s.whatsapp.net";
+        assert_eq!(app.open_chat.as_deref(), Some(chat));
+        assert_eq!(app.composer, "Hello there");
+        assert!(app.chats.iter().any(|row| row.id == chat));
+    }
+
     /// Forgetting the lock forgets what was waiting on it: after unlinking
     /// there is no chat left to open.
     #[test]
@@ -26610,6 +27093,54 @@ mod app_lock_tests {
             forwarded: false,
             thumbnail: None,
         }
+    }
+
+    #[test]
+    fn channel_posts_do_not_trigger_desktop_notifications() {
+        let mut app = unlocked_app();
+        let channel = "123456789@newsletter";
+        app.chats = vec![Chat::new(channel.into(), "Channel".into())];
+        let mut message = incoming(&mut app);
+        message.chat = channel.into();
+        message.sender = channel.into();
+
+        app.maybe_notify(channel, &message);
+
+        assert!(app.notifications.shown.is_empty());
+    }
+
+    #[test]
+    fn group_ignore_is_scoped_to_one_group_and_can_be_reversed() {
+        let mut app = unlocked_app();
+        let group = "12345-67890@g.us";
+        let other_group = "98765-43210@g.us";
+        let sender = "15550001111@s.whatsapp.net";
+        app.chats = vec![
+            Chat::new(group.into(), "First group".into()),
+            Chat::new(other_group.into(), "Second group".into()),
+        ];
+        let ctx = egui::Context::default();
+
+        app.apply(
+            Action::SetGroupSenderIgnored {
+                chat: group.into(),
+                sender: sender.into(),
+                ignored: true,
+            },
+            &ctx,
+        );
+        assert!(app.ignored_group_sender(group, sender));
+        assert!(!app.ignored_group_sender(other_group, sender));
+
+        app.apply(
+            Action::SetGroupSenderIgnored {
+                chat: group.into(),
+                sender: sender.into(),
+                ignored: false,
+            },
+            &ctx,
+        );
+        assert!(!app.ignored_group_sender(group, sender));
     }
 
     #[test]

@@ -800,6 +800,14 @@ msgstr "Remover sua reação"
 msgid "Reply privately"
 msgstr "Responder em particular"
 
+#: src/ui/conversation.rs:7530
+msgid "Stop ignoring in this group"
+msgstr "Parar de ignorar neste grupo"
+
+#: src/ui/conversation.rs:7532
+msgid "Ignore in this group"
+msgstr "Ignorar neste grupo"
+
 #: src/ui/conversation.rs:7020 src/ui/conversation.rs:7376
 msgid "Star"
 msgstr "Marcar com estrela"
@@ -1719,6 +1727,14 @@ msgstr ""
 msgid "Chats"
 msgstr "Conversas"
 
+#: src/ui/settings.rs:510
+msgid "Ignored in this group."
+msgstr "Esta pessoa está sendo ignorada neste grupo."
+
+#: src/ui/settings.rs:516
+msgid "Unignore"
+msgstr "Deixar de ignorar"
+
 #: src/ui/settings.rs:430
 msgid "Enter sends"
 msgstr "Enter envia"
@@ -1794,6 +1810,14 @@ msgid "For chats you are not looking at. Muted chats stay quiet."
 msgstr ""
 "Para conversas que você não está vendo. Conversas silenciadas ficam quietas."
 
+#: src/ui/settings.rs:569
+msgid "Channel notifications"
+msgstr "Notificações de canais"
+
+#: src/ui/settings.rs:570
+msgid "Show desktop notifications for WhatsApp Channels."
+msgstr "Mostrar notificações dos Canais do WhatsApp na área de trabalho."
+
 #: src/ui/settings.rs:529
 msgid "Show message content in notifications"
 msgstr "Mostrar o conteúdo das mensagens nas notificações"
@@ -1838,6 +1862,22 @@ msgstr "Permite que as pessoas vejam quando você lê as mensagens delas."
 #: src/ui/settings.rs:582
 msgid "Send read receipts"
 msgstr "Enviar confirmações de leitura"
+
+#: src/ui/settings.rs:668
+msgid "Defer read receipts until you send a message"
+msgstr "Adiar confirmações de leitura até enviar uma mensagem"
+
+#: src/ui/settings.rs:671
+msgid "Read state stays local. Receipts are sent after your message is sent in that chat."
+msgstr "O estado de leitura fica local. As confirmações são enviadas depois que você manda uma mensagem nesse chat."
+
+#: src/ui/settings.rs:676
+msgid "Keep messages deleted by others"
+msgstr "Manter mensagens apagadas por outras pessoas"
+
+#: src/ui/settings.rs:679
+msgid "Keep the local copy of incoming messages after the sender deletes them."
+msgstr "Guardar uma cópia local das mensagens recebidas mesmo depois que o remetente as apagar."
 
 #: src/ui/settings.rs:587
 msgid "Show when you are typing"
@@ -2510,6 +2550,10 @@ msgstr "Esta mensagem não está mais disponível."
 #: src/ui/message_info.rs:192
 msgid "Played"
 msgstr "Reproduzida"
+
+#: src/ui/conversation.rs
+msgid "Played · Message info"
+msgstr "Reproduzida · Informações da mensagem"
 
 #: src/ui/message_info.rs:194
 msgid "Read"
@@ -3377,6 +3421,14 @@ msgstr "Adicionar foto do grupo"
 msgid "Description"
 msgstr "Descrição"
 
+#: src/ui/info.rs
+msgid "Hide description"
+msgstr "Ocultar descrição"
+
+#: src/ui/info.rs
+msgid "Show description"
+msgstr "Mostrar descrição"
+
 #: src/ui/info.rs:701
 #, fuzzy
 msgid "Edit group description"
@@ -3388,7 +3440,19 @@ msgstr ""
 
 #: src/ui/info.rs:903 src/ui/new_group.rs:76
 msgid "Add members"
-msgstr ""
+msgstr "Adicionar membros"
+
+#: src/ui/info.rs
+msgid "Search members"
+msgstr "Buscar membros"
+
+#: src/ui/info.rs
+msgid "Members"
+msgstr "Membros"
+
+#: src/ui/info.rs
+msgid "No members match that search."
+msgstr "Nenhum membro corresponde à busca."
 
 #: src/ui/info.rs:957
 #, rust-format
@@ -4096,6 +4160,218 @@ msgstr "Reproduzida"
 #, fuzzy
 msgid "not sent"
 msgstr "Enter envia"
+
+#: src/ui/settings.rs
+msgid "AI provider"
+msgstr "Provedor de IA"
+
+#: src/ui/settings.rs
+msgid "Choose where requested drafts are generated."
+msgstr "Escolha onde os rascunhos serão gerados."
+
+#: src/ui/settings.rs
+msgid "Conversation context"
+msgstr "Contexto da conversa"
+
+#: src/ui/settings.rs
+msgid "Number of recent messages to include, counting the message being answered. All uses locally archived messages."
+msgstr "Quantidade de mensagens recentes a incluir, contando a mensagem que será respondida. A opção Todas usa as mensagens já arquivadas localmente."
+
+#: src/ui/settings.rs
+msgid "All messages"
+msgstr "Todas as mensagens"
+
+#: src/ui/settings.rs
+msgid "When you request a draft, hosted providers receive the context selected below. Review the provider's privacy policy before using one. Nothing is sent automatically."
+msgstr "Quando você pede uma sugestão, provedores hospedados recebem o contexto selecionado abaixo. Consulte a política de privacidade do provedor antes de usá-lo. Nada é enviado automaticamente."
+
+#: src/ui/settings.rs
+msgid "Optional for local servers. Stored in your operating system's keyring."
+msgstr "Opcional em servidores locais. Armazenada no chaveiro do sistema operacional."
+
+#: src/ui/settings.rs
+msgid "Required for this provider. Stored in your operating system's keyring."
+msgstr "Obrigatória para este provedor. Armazenada no chaveiro do sistema operacional."
+
+#: src/ai.rs
+msgid "OpenAI (ChatGPT)"
+msgstr "OpenAI (ChatGPT)"
+
+#: src/ai.rs
+msgid "DeepSeek"
+msgstr "DeepSeek"
+
+#: src/ai.rs
+msgid "Anthropic (Claude)"
+msgstr "Anthropic (Claude)"
+
+#: src/ai.rs
+msgid "Google (Gemini)"
+msgstr "Google (Gemini)"
+
+#: src/ai.rs
+msgid "OpenRouter"
+msgstr "OpenRouter"
+
+#: src/ai.rs
+msgid "Local (Ollama / LM Studio)"
+msgstr "Local (Ollama / LM Studio)"
+
+#: src/ui/settings.rs
+msgid "Model"
+msgstr "Modelo"
+
+#: src/ui/settings.rs
+msgid "Choose a model reported by the selected provider."
+msgstr "Escolha um modelo disponibilizado pelo provedor selecionado."
+
+#: src/ui/settings.rs
+msgid "Model identifier"
+msgstr "Identificador do modelo"
+
+#: src/ui/settings.rs
+msgid "Provider API key"
+msgstr "Chave de API do provedor"
+
+#: src/ui/settings.rs
+msgid "Stored in your operating system's keyring."
+msgstr "Armazenada no chaveiro do sistema operacional."
+
+#: src/ui/settings.rs
+msgid "Enter provider API key"
+msgstr "Insira a chave de API do provedor"
+
+#: src/ui/settings.rs
+msgid "Key removed from the OS keyring"
+msgstr "Chave removida do chaveiro do sistema"
+
+#: src/ui/settings.rs
+msgid "AI drafts"
+msgstr "Rascunhos com IA"
+
+#: src/ui/settings.rs
+msgid "Local model endpoint"
+msgstr "Endereço do modelo local"
+
+#: src/ui/settings.rs
+msgid "Only loopback servers are allowed. Ollama and LM Studio support this API."
+msgstr "Só servidores locais são permitidos. Ollama e LM Studio oferecem essa API."
+
+#: src/ai.rs
+msgid "A local model URL must point to localhost or a loopback IP"
+msgstr "O endereço de um modelo local deve apontar para localhost ou um IP de loopback"
+
+#: src/ui/settings.rs
+msgid "Local model"
+msgstr "Modelo local"
+
+#: src/ui/settings.rs
+msgid "Refresh the list after starting your local model server."
+msgstr "Atualize a lista depois de iniciar o servidor do modelo local."
+
+#: src/ui/settings.rs
+msgid "Choose a model"
+msgstr "Escolha um modelo"
+
+#: src/ui/settings.rs
+msgid "Local API key"
+msgstr "Chave de API local"
+
+#: src/ui/settings.rs
+msgid "Optional. Stored in your operating system's keyring."
+msgstr "Opcional. Armazenada no chaveiro do sistema operacional."
+
+#: src/ui/settings.rs
+msgid "API key (optional)"
+msgstr "Chave de API (opcional)"
+
+#: src/ui/settings.rs
+msgid "Saving key…"
+msgstr "Salvando chave…"
+
+#: src/ui/settings.rs
+msgid "Key saved in the OS keyring"
+msgstr "Chave salva no chaveiro do sistema"
+
+#: src/ui/settings.rs
+msgid "Could not save key"
+msgstr "Não foi possível salvar a chave"
+
+#: src/ui/settings.rs
+msgid "Available models"
+msgstr "Modelos disponíveis"
+
+#: src/ui/settings.rs
+msgid "Model names are fetched from the selected provider when you refresh."
+msgstr "Os nomes dos modelos são buscados no provedor selecionado ao atualizar a lista."
+
+#: src/ui/settings.rs
+msgid "Refresh models"
+msgstr "Atualizar modelos"
+
+#: src/ui/settings.rs
+msgid "Synthetic reply test"
+msgstr "Teste de resposta fictícia"
+
+#: src/ui/settings.rs
+msgid "Uses only the sample text below, never a real conversation."
+msgstr "Usa apenas o texto de exemplo abaixo, nunca uma conversa real."
+
+#: src/ui/settings.rs
+msgid "Synthetic message"
+msgstr "Mensagem fictícia"
+
+#: src/ui/settings.rs
+msgid "Test selected model"
+msgstr "Testar modelo selecionado"
+
+#: src/ui/info.rs
+msgid "Draft replies with AI"
+msgstr "Rascunhar respostas com IA"
+
+#: src/ui/info.rs
+msgid "Only this contact. Uses the context configured in AI settings when requested. Nothing is sent automatically."
+msgstr "Só para este contato. Usa o contexto definido nas configurações de IA quando você pede uma sugestão. Nada é enviado automaticamente."
+
+#: src/ui/info.rs
+msgid "How should the AI sound?"
+msgstr "Como a IA deve responder?"
+
+#: src/ui/conversation.rs
+msgid "Draft reply with AI"
+msgstr "Rascunhar resposta com IA"
+
+#: src/ui/conversation.rs
+msgid "AI draft"
+msgstr "Rascunho da IA"
+
+#: src/ui/conversation.rs
+msgid "Use draft"
+msgstr "Usar rascunho"
+
+#: src/ui/conversation.rs
+msgid "Discard draft"
+msgstr "Descartar rascunho"
+
+#: src/app.rs
+msgid "AI draft ready to review above the composer."
+msgstr "Sugestão da IA pronta para revisar acima do campo de mensagem."
+
+#: src/ui/conversation.rs
+msgid "Generating AI reply suggestion…"
+msgstr "Gerando sugestão de resposta com IA…"
+
+#: src/ui/settings.rs
+msgid "Draft preview"
+msgstr "Prévia do rascunho"
+
+#: src/app.rs
+msgid "Choose a model in AI settings."
+msgstr "Escolha um modelo nas configurações de IA."
+
+#: src/app.rs
+msgid "There is no incoming message to answer yet."
+msgstr "Ainda não há mensagem recebida para responder."
 
 #~ msgid "Back to the chats"
 #~ msgstr "Voltar para as conversas"

@@ -3,6 +3,7 @@
 use std::borrow::Cow;
 
 use egui::{Align, CornerRadius, Frame, Layout, Margin, Rect, Sense, Stroke, Vec2, pos2, vec2};
+use zeroize::Zeroize;
 
 use crate::app::App;
 use crate::i18n::Locale;
@@ -101,7 +102,10 @@ enum Control {
     /// A switch bound to a setting.
     Toggle(fn(&mut Settings) -> &mut bool),
     /// A switch bound to the active WhatsApp account.
-    AccountToggle(fn(&mut crate::settings::AccountSettings) -> &mut bool),
+    AccountToggle {
+        field: fn(&mut crate::settings::AccountSettings) -> &mut bool,
+        sync_keep_deleted_messages: bool,
+    },
     /// Something that lays itself out, like the account card.
     Block(Draw),
 }
@@ -159,7 +163,28 @@ impl Section {
             description: description.into(),
             keywords: Vec::new(),
         };
-        self.entries.push((row, Control::AccountToggle(field)));
+        self.entries.push((
+            row,
+            Control::AccountToggle {
+                field,
+                sync_keep_deleted_messages: false,
+            },
+        ));
+    }
+
+    fn keep_deleted_toggle(&mut self, title: impl Into<Text>, description: impl Into<Text>) {
+        let row = Row {
+            title: title.into(),
+            description: description.into(),
+            keywords: Vec::new(),
+        };
+        self.entries.push((
+            row,
+            Control::AccountToggle {
+                field: |settings| &mut settings.keep_deleted_messages,
+                sync_keep_deleted_messages: true,
+            },
+        ));
     }
 
     fn block(&mut self, keywords: Vec<Text>, draw: impl FnOnce(&mut egui::Ui, &mut App) + 'static) {
@@ -200,8 +225,18 @@ impl Section {
                     Control::Toggle(field) => {
                         toggle(ui, app, &row.title.shown, &row.description.shown, field);
                     }
-                    Control::AccountToggle(field) => {
-                        account_toggle(ui, app, &row.title.shown, &row.description.shown, field);
+                    Control::AccountToggle {
+                        field,
+                        sync_keep_deleted_messages,
+                    } => {
+                        account_toggle(
+                            ui,
+                            app,
+                            &row.title.shown,
+                            &row.description.shown,
+                            field,
+                            sync_keep_deleted_messages,
+                        );
                     }
                     Control::Block(draw) => draw(ui, app),
                 }
@@ -513,6 +548,48 @@ fn sections(app: &App) -> Vec<Section> {
             ui.data_mut(|data| data.insert_temp(code_id, code));
         },
     );
+    let ignored: Vec<_> = app
+        .account()
+        .settings
+        .ignored_group_senders
+        .iter()
+        .flat_map(|(chat, senders)| {
+            let group = app
+                .chats
+                .iter()
+                .find(|row| row.id == *chat)
+                .map(|row| app.chat_title(row))
+                .unwrap_or_else(|| chat.clone());
+            senders.iter().map(move |sender| {
+                let name = app.display_name_or(sender, None);
+                (chat.clone(), sender.clone(), group.clone(), name)
+            })
+        })
+        .collect();
+    for (chat, sender, group, name) in ignored {
+        let title = format!("{name} · {group}");
+        chats.row(
+            title,
+            translated(locale, "Ignored in this group."),
+            move |ui, app| {
+                if theme::soft_button(
+                    ui,
+                    &app.palette,
+                    None,
+                    &crate::i18n::gettext(app.locale, "Unignore"),
+                    false,
+                )
+                .clicked()
+                {
+                    app.actions.push(Action::SetGroupSenderIgnored {
+                        chat: chat.clone(),
+                        sender: sender.clone(),
+                        ignored: false,
+                    });
+                }
+            },
+        );
+    }
 
     let mut notifications = Section::new(translated(locale, "Notifications"));
     notifications.account_toggle(
@@ -522,6 +599,11 @@ fn sections(app: &App) -> Vec<Section> {
             "For chats you are not looking at. Muted chats stay quiet.",
         ),
         |settings| &mut settings.notifications,
+    );
+    notifications.account_toggle(
+        translated(locale, "Channel notifications"),
+        translated(locale, "Show desktop notifications for WhatsApp Channels."),
+        |settings| &mut settings.channel_notifications,
     );
     if app.account().settings.notifications {
         let (title, description) = sound_text(locale, false);
@@ -582,6 +664,21 @@ fn sections(app: &App) -> Vec<Section> {
         translated(locale, "Send read receipts"),
         receipts_note,
         |settings| &mut settings.send_read_receipts,
+    );
+    privacy.account_toggle(
+        translated(locale, "Defer read receipts until you send a message"),
+        translated(
+            locale,
+            "Read state stays local. Receipts are sent after your message is sent in that chat.",
+        ),
+        |settings| &mut settings.defer_read_receipts_until_send,
+    );
+    privacy.keep_deleted_toggle(
+        translated(locale, "Keep messages deleted by others"),
+        translated(
+            locale,
+            "Keep the local copy of incoming messages after the sender deletes them.",
+        ),
     );
     privacy.account_toggle(
         translated(locale, "Show when you are typing"),
@@ -664,6 +761,310 @@ fn sections(app: &App) -> Vec<Section> {
             ui.add_enabled_ui(editable, |ui| privacy_control(ui, app, kind));
         });
     }
+
+    let mut ai = Section::new(translated(locale, "AI drafts"));
+    ai.block(
+        vec![
+            translated(locale, "AI provider"),
+            translated(locale, "Privacy"),
+            translated(locale, "Conversation history"),
+        ],
+        move |ui, app| {
+            theme::paragraph(
+                ui,
+                crate::i18n::gettext(
+                    app.locale,
+                    "When you request a draft, hosted providers receive the context selected below. Review the provider's privacy policy before using one. Nothing is sent automatically.",
+                ),
+                theme::regular(12.5),
+                app.palette.secondary,
+            );
+            ui.add_space(6.0);
+        },
+    );
+    ai.row(
+        translated(locale, "AI provider"),
+        translated(locale, "Choose where requested drafts are generated."),
+        |ui, app| {
+            let selected = app.settings.ai_provider;
+            let response = egui::ComboBox::from_id_salt("ai-provider")
+                .selected_text(selected.label(app.locale))
+                .width(ui.available_width())
+                .show_ui(ui, |ui| {
+                    for provider in crate::ai::AiProvider::ALL {
+                        if theme_option(
+                            ui,
+                            &app.palette,
+                            &provider.label(app.locale),
+                            provider == selected,
+                        ) {
+                            app.settings.ai_provider = provider;
+                            app.settings.ai_model.clear();
+                            app.ai_models.clear();
+                            app.ai_models_provider = None;
+                            app.ai_key_saved = None;
+                            app.actions.push(Action::SettingsChanged);
+                        }
+                    }
+                });
+            theme::reveal_focus(&response.response);
+        },
+    );
+    ai.row(
+        translated(locale, "Conversation context"),
+        translated(
+            locale,
+            "Number of recent messages to include, counting the message being answered. All uses locally archived messages.",
+        ),
+        |ui, app| {
+            let mut use_all = app.settings.ai_context_messages.is_none();
+            let mut count = app.settings.ai_context_messages.unwrap_or(1).max(1);
+            ui.horizontal(|ui| {
+                if !use_all {
+                    let response =
+                        ui.add(egui::DragValue::new(&mut count).range(1..=100_000).speed(1));
+                    theme::reveal_focus(&response);
+                    if response.changed() {
+                        app.actions.push(Action::SetAiContextMessages(Some(count)));
+                    }
+                }
+                let response = ui.checkbox(
+                    &mut use_all,
+                    crate::i18n::gettext(app.locale, "All messages"),
+                );
+                theme::reveal_focus(&response);
+                if response.changed() {
+                    app.actions.push(Action::SetAiContextMessages(if use_all {
+                        None
+                    } else {
+                        Some(1)
+                    }));
+                }
+            });
+        },
+    );
+    if app.settings.ai_provider.is_local() {
+        ai.row(
+            translated(locale, "Local model endpoint"),
+            translated(
+                locale,
+                "Only loopback servers are allowed. Ollama and LM Studio support this API.",
+            ),
+            |ui, app| {
+                let response = ui.add(
+                    egui::TextEdit::singleline(&mut app.settings.ai_endpoint)
+                        .font(theme::regular(13.0))
+                        .text_color(app.palette.text)
+                        .desired_width(ui.available_width())
+                        .hint_text("http://localhost:11434/v1"),
+                );
+                if response.changed() {
+                    app.ai_models.clear();
+                    app.ai_models_pending = None;
+                    app.ai_models_provider = None;
+                    app.actions.push(Action::SettingsChanged);
+                }
+            },
+        );
+    }
+    ai.row(
+        translated(locale, "Model"),
+        translated(locale, "Choose a model reported by the selected provider."),
+        |ui, app| {
+            if app.ai_models.is_empty() {
+                let response = ui.add(
+                    egui::TextEdit::singleline(&mut app.settings.ai_model)
+                        .font(theme::regular(13.0))
+                        .text_color(app.palette.text)
+                        .desired_width(ui.available_width())
+                        .hint_text(crate::i18n::gettext(app.locale, "Model identifier")),
+                );
+                if response.changed() {
+                    app.actions.push(Action::SettingsChanged);
+                }
+            } else {
+                let selected = app.settings.ai_model.clone();
+                let response = egui::ComboBox::from_id_salt("local-ai-model")
+                    .selected_text(if selected.is_empty() {
+                        crate::i18n::gettext(app.locale, "Choose a model").into_owned()
+                    } else {
+                        selected.clone()
+                    })
+                    .width(ui.available_width())
+                    .show_ui(ui, |ui| {
+                        for model in &app.ai_models {
+                            if theme_option(ui, &app.palette, model, model == &selected) {
+                                app.settings.ai_model.clone_from(model);
+                                app.actions.push(Action::SettingsChanged);
+                            }
+                        }
+                    });
+                theme::reveal_focus(&response.response);
+            }
+        },
+    );
+    ai.row(
+        translated(locale, "Provider API key"),
+        if app.settings.ai_provider.is_local() {
+            translated(
+                locale,
+                "Optional for local servers. Stored in your operating system's keyring.",
+            )
+        } else {
+            translated(
+                locale,
+                "Required for this provider. Stored in your operating system's keyring.",
+            )
+        },
+        |ui, app| {
+            let provider = app.settings.ai_provider;
+            let key_id = egui::Id::new(("ai-provider-key-draft", provider.keyring_id()));
+            let mut key: String = ui.data_mut(|data| data.get_temp(key_id).unwrap_or_default());
+            let width = (ui.available_width() - 66.0).max(80.0);
+            let response = ui.add(
+                egui::TextEdit::singleline(&mut key)
+                    .password(true)
+                    .font(theme::regular(13.0))
+                    .text_color(app.palette.text)
+                    .desired_width(width)
+                    .hint_text(crate::i18n::gettext(app.locale, "Enter provider API key")),
+            );
+            theme::reveal_focus(&response);
+            ui.data_mut(|data| data.insert_temp(key_id, key.clone()));
+            if theme::soft_button(
+                ui,
+                &app.palette,
+                None,
+                &crate::i18n::gettext(app.locale, "Save"),
+                false,
+            )
+            .clicked()
+            {
+                app.backend.send(crate::backend::Command::SetAiApiKey {
+                    provider,
+                    key: crate::ai::ApiKey::new(key.clone()),
+                });
+                app.ai_key_save_pending = Some(provider);
+                app.ai_key_saved = None;
+                key.zeroize();
+                ui.data_mut(|data| data.remove::<String>(key_id));
+            }
+            if app.ai_key_save_pending == Some(provider) {
+                theme::text(
+                    ui,
+                    crate::i18n::gettext(app.locale, "Saving key…"),
+                    theme::regular(11.5),
+                    app.palette.secondary,
+                );
+            } else if let Some((saved_provider, saved)) = app.ai_key_saved
+                && saved_provider == provider
+            {
+                let status = if saved {
+                    "Key saved in the OS keyring"
+                } else {
+                    "Key removed from the OS keyring"
+                };
+                theme::text(
+                    ui,
+                    crate::i18n::gettext(app.locale, status),
+                    theme::regular(11.5),
+                    app.palette.secondary,
+                );
+            }
+        },
+    );
+    ai.row(
+        translated(locale, "Available models"),
+        translated(
+            locale,
+            "Model names are fetched from the selected provider when you refresh.",
+        ),
+        |ui, app| {
+            if theme::soft_button(
+                ui,
+                &app.palette,
+                Some(Icon::Refresh),
+                &crate::i18n::gettext(app.locale, "Refresh models"),
+                false,
+            )
+            .clicked()
+            {
+                app.actions.push(Action::RefreshAiModels);
+            }
+            if app.ai_models_pending.is_some() {
+                theme::spinner(ui, 15.0, app.palette.secondary);
+            }
+        },
+    );
+    ai.block(
+        vec![
+            translated(locale, "Synthetic reply test"),
+            translated(locale, "Test selected model"),
+        ],
+        |ui, app| {
+            let palette = app.palette;
+            ui.set_width(ui.available_width());
+            theme::text(
+                ui,
+                crate::i18n::gettext(app.locale, "Synthetic reply test"),
+                theme::medium(13.0),
+                palette.text,
+            );
+            theme::paragraph(
+                ui,
+                crate::i18n::gettext(
+                    app.locale,
+                    "Uses only the sample text below, never a real conversation.",
+                ),
+                theme::regular(12.5),
+                palette.secondary,
+            );
+            ui.add_space(6.0);
+            ui.horizontal(|ui| {
+                let button_width = 164.0_f32.min(ui.available_width() * 0.45);
+                let field_width =
+                    (ui.available_width() - button_width - ui.spacing().item_spacing.x).max(120.0);
+                let response = ui.add(
+                    egui::TextEdit::singleline(&mut app.ai_simulator_message)
+                        .font(theme::regular(13.0))
+                        .text_color(palette.text)
+                        .desired_width(field_width)
+                        .hint_text(crate::i18n::gettext(app.locale, "Synthetic message")),
+                );
+                theme::reveal_focus(&response);
+                let pending = app.ai_simulator_pending();
+                let clicked = ui
+                    .add_enabled_ui(!pending, |ui| {
+                        theme::soft_button(
+                            ui,
+                            &palette,
+                            Some(Icon::MessageCircle),
+                            &crate::i18n::gettext(app.locale, "Test selected model"),
+                            false,
+                        )
+                    })
+                    .inner
+                    .clicked();
+                if clicked {
+                    app.actions.push(Action::TestAiSimulator);
+                }
+                if pending {
+                    theme::spinner(ui, 14.0, palette.secondary);
+                }
+            });
+            if let Some(reply) = &app.ai_simulator_reply {
+                ui.add_space(8.0);
+                theme::text(
+                    ui,
+                    crate::i18n::gettext(app.locale, "Draft preview"),
+                    theme::medium(12.5),
+                    palette.secondary,
+                );
+                theme::paragraph(ui, reply, theme::regular(13.0), palette.text);
+            }
+            ui.add_space(6.0);
+        },
+    );
 
     let mut system = Section::new(translated(locale, "System"));
     // A closed Mac app stays in the Dock, which brings its window back, so
@@ -909,6 +1310,7 @@ fn sections(app: &App) -> Vec<Section> {
         chats,
         notifications,
         privacy,
+        ai,
         system,
         account_section,
         files,
@@ -1930,6 +2332,7 @@ fn account_toggle(
     label: &str,
     description: &str,
     field: impl Fn(&mut crate::settings::AccountSettings) -> &mut bool,
+    sync_keep_deleted_messages: bool,
 ) {
     let palette = app.palette;
     let mut value = *field(&mut app.account_mut().settings);
@@ -1945,6 +2348,13 @@ fn account_toggle(
     if changed {
         *field(&mut app.account_mut().settings) = value;
         app.account_mut().mark_settings_dirty();
+        if sync_keep_deleted_messages {
+            let keep_deleted_messages = app.account().settings.keep_deleted_messages;
+            app.backend
+                .send(crate::backend::Command::SetKeepDeletedMessages(
+                    keep_deleted_messages,
+                ));
+        }
     }
 }
 

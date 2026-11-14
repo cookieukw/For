@@ -262,6 +262,12 @@ impl Archive {
                     broadcast_list = COALESCE(messages.broadcast_list, excluded.broadcast_list)",
                 params![list, chat, ids],
             )?;
+            transaction.execute(
+                "INSERT OR IGNORE INTO recovered_messages (chat, id)
+                 SELECT ?2, id FROM recovered_messages WHERE chat = ?1
+                 AND id IN (SELECT value FROM json_each(?3))",
+                params![list, chat, ids],
+            )?;
             self.settle_duplicates(chat, copies, Reactions::Both)?;
             transaction.execute(
                 "UPDATE chats SET
@@ -433,13 +439,18 @@ mod tests {
             path_of(&archive, "edited").as_deref(),
             Some(Path::new("C:/fixture/chat.jpg"))
         );
-        for id in ["revoked", "revoked-there"] {
-            assert_eq!(
-                archive.message(PEER, id).unwrap().unwrap().content,
-                Content::Revoked,
-                "{id}"
-            );
-        }
+        assert_eq!(
+            archive.message(PEER, "revoked").unwrap().unwrap().content,
+            Content::text("Hello fixture")
+        );
+        assert_eq!(
+            archive
+                .message(PEER, "revoked-there")
+                .unwrap()
+                .unwrap()
+                .content,
+            Content::text("Edited fixture")
+        );
         // Every one of them was in the chat already.
         assert_eq!(archive.chat(PEER).unwrap().unwrap().unread, 0);
     }

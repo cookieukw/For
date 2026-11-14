@@ -1065,6 +1065,9 @@ pub async fn run(
         stars_recovering: false,
         downloads: HashSet::new(),
         read_sync: ReadSync::default(),
+        pending_read_receipts: HashMap::new(),
+        pending_read_sync: HashSet::new(),
+        keep_deleted_messages: true,
         favorite_chats: Default::default(),
         poll_decrypting: 0,
         poll_history: Default::default(),
@@ -1095,6 +1098,7 @@ pub async fn run(
     worker.backfill_interactive();
     worker.adopt_broadcast_lists();
     worker.relocate_media();
+    worker.emit_recovered_messages();
     discard_attachment_staging(&worker.dirs.media_cache_dir());
     discard_attachment_staging(&worker.dirs.sticker_cache_dir());
     // Saved stickers are user data, but an interrupted download's staging
@@ -1481,6 +1485,12 @@ struct Worker {
     receipts_pruned: Instant,
     /// The phone's reads and reactions waiting for their message.
     early: early_events::EarlyEvents,
+    /// Incoming messages read here whose receipts wait for a message to be sent.
+    pending_read_receipts: HashMap<ChatId, Vec<(String, String)>>,
+    /// Chat read-state sync is held too, because WhatsApp may expose a
+    /// linked-device read when the app-state write is sent.
+    pending_read_sync: HashSet<ChatId>,
+    keep_deleted_messages: bool,
     /// Notices a link that stays open after a sleep but carries nothing.
     link_watch: link_watch::LinkWatch,
     /// Serial background phone-history prefetch.
@@ -2346,6 +2356,21 @@ impl Worker {
         if let Ok(Some(mut message)) = self.archive.message(chat, id) {
             self.polish(&mut message);
             self.emit(Event::MessageUpdated(Box::new(message)));
+        }
+    }
+
+    fn emit_recovered_messages(&self) {
+        match self.archive.recovered_messages() {
+            Ok(messages) => {
+                for (chat, message) in messages {
+                    self.emit(Event::RecoveredMessage {
+                        chat,
+                        message,
+                        recovered: true,
+                    });
+                }
+            }
+            Err(error) => log::warn!("could not list recovered messages: {error}"),
         }
     }
 
@@ -4736,6 +4761,8 @@ impl Worker {
         // Reads for the unlinked account must not be answered for the next.
         self.withheld_pages.clear();
         self.early.clear();
+        self.pending_read_receipts.clear();
+        self.pending_read_sync.clear();
         self.privacy_reveal_at = None;
         self.privacy_attempts = 0;
         self.privacy_warned = false;
@@ -5189,18 +5216,32 @@ impl Worker {
             };
             match protocol.r#type {
                 Some(Type::REVOKE) => {
-                    let old = self.archive.message(&chat, &target).ok().flatten();
                     // A late answer to an edit sent from here must not
                     // replace what the phone did since.
                     self.edits.remove(&(chat.clone(), target.clone()));
-                    if let Ok(true) =
-                        self.archive
-                            .set_content(&chat, &target, &Content::Revoked, false)
+                    if from_me || !self.keep_deleted_messages {
+                        let old = self.archive.message(&chat, &target).ok().flatten();
+                        if let Ok(true) =
+                            self.archive
+                                .set_content(&chat, &target, &Content::Revoked, false)
+                        {
+                            self.emit_message(&chat, &target);
+                            self.emit_chat(&chat);
+                            self.media_changed(&chat, old.as_ref().map(|old| &old.content), None);
+                        }
+                    } else if self
+                        .archive
+                        .mark_recovered_message(&chat, &target)
+                        .unwrap_or(false)
                     {
-                        self.emit_message(&chat, &target);
-                        self.emit_chat(&chat);
-                        self.media_changed(&chat, old.as_ref().map(|old| &old.content), None);
+                        self.emit(Event::RecoveredMessage {
+                            chat: chat.clone(),
+                            message: target.clone(),
+                            recovered: true,
+                        });
                     }
+                    // For an incoming revoke, keep the copy already received
+                    // in this user's encrypted local archive.
                 }
                 Some(Type::MESSAGE_EDIT) => {
                     self.edits.remove(&(chat.clone(), target.clone()));
@@ -6652,19 +6693,30 @@ impl Worker {
                 );
             }
             for revoked in chat.revoked {
-                if self
+                let was_ours = self
                     .archive
                     .message(&id, &revoked)
                     .ok()
                     .flatten()
-                    .is_some_and(|old| old.content.listable())
-                {
-                    media_changed_in.insert(id.clone());
-                }
-                let _ = self
+                    .is_some_and(|old| old.from_me);
+                if was_ours || !self.keep_deleted_messages {
+                    let _ = self
+                        .archive
+                        .set_content(&id, &revoked, &Content::Revoked, false);
+                } else if self
                     .archive
-                    .set_content(&id, &revoked, &Content::Revoked, false);
+                    .mark_recovered_message(&id, &revoked)
+                    .unwrap_or(false)
+                {
+                    self.emit(Event::RecoveredMessage {
+                        chat: id.clone(),
+                        message: revoked,
+                        recovered: true,
+                    });
+                }
             }
+            // Incoming revokes in phone history do not erase copies already
+            // archived locally.
             for clip in chat.clips {
                 let sender = if clip.from_me {
                     self.me()
@@ -7323,7 +7375,12 @@ impl Worker {
                     }
                 });
             }
-            Command::MarkRead { chat, receipts } => self.mark_read(chat, receipts),
+            Command::MarkRead {
+                chat,
+                receipts,
+                defer_receipts,
+            } => self.mark_read(chat, receipts, defer_receipts),
+            Command::SetKeepDeletedMessages(keep) => self.keep_deleted_messages = keep,
             Command::MarkUnread(chat) => match self.archive.mark_unread(&chat) {
                 Ok(marked) => {
                     self.emit_chat(&chat);
@@ -7403,6 +7460,13 @@ impl Worker {
             }
             Command::LoadUntil { chat, id, before } => self.load_until(chat, id, before),
             Command::SearchMessages { query } => self.search_messages(query),
+            Command::SetAiApiKey { provider, key } => self.save_ai_api_key(provider, key),
+            Command::ListAiModels {
+                request,
+                provider,
+                endpoint,
+            } => self.list_ai_models(request, provider, endpoint),
+            Command::DraftAiReply(request) => self.draft_ai_reply(request),
             Command::SearchChatMessages {
                 chat,
                 query,
@@ -8922,6 +8986,9 @@ impl Worker {
                     Some(_) => Delivery::Failed,
                     None => Delivery::Sent,
                 };
+                if error.is_none() {
+                    self.release_deferred_read(&chat);
+                }
                 if error.is_some() {
                     // A failed send is never acked; a retry stores the row again.
                     self.awaiting_ack.remove(&id);
@@ -9956,7 +10023,7 @@ impl Worker {
         Some((id, message, expiration))
     }
 
-    fn mark_read(&mut self, chat: ChatId, receipts: bool) {
+    fn mark_read(&mut self, chat: ChatId, receipts: bool, defer_receipts: bool) {
         let Ok(Some(row)) = self.archive.chat(&chat) else {
             return;
         };
@@ -9975,9 +10042,27 @@ impl Worker {
         if row.unread == 0 && !row.marked_unread {
             return;
         }
-        let _ = self.archive.queue_read_sync(&chat);
-        self.pump_read_sync();
-        self.send_read_receipts(chat, ids);
+        if defer_receipts {
+            self.pending_read_sync.insert(chat.clone());
+            if !ids.is_empty() {
+                hold_read_receipts(&mut self.pending_read_receipts, chat, ids);
+            }
+        } else {
+            let _ = self.archive.queue_read_sync(&chat);
+            self.pump_read_sync();
+            self.send_read_receipts(chat, ids);
+        }
+    }
+
+    fn release_deferred_read(&mut self, chat: &ChatId) {
+        if self.pending_read_sync.remove(chat) {
+            let _ = self.archive.queue_read_sync(chat);
+            self.pump_read_sync();
+        }
+        let receipts = take_pending_read_receipts(&mut self.pending_read_receipts, chat, true);
+        if !receipts.is_empty() {
+            self.send_read_receipts(chat.clone(), receipts);
+        }
     }
 
     fn pump_read_sync(&mut self) {
@@ -9997,9 +10082,9 @@ impl Worker {
             let client = client.clone();
             let commands = self.commands.clone();
             tokio::spawn(async move {
-                // This update is private to our devices, even with blue ticks
-                // disabled. Keep the original position when retrying offline
-                // reads, not the latest message received since the local read.
+                // The read-state update is queued only after the user sends in
+                // this chat when deferred receipts are enabled. Keep its
+                // original position when retrying, not the latest arrival.
                 let range = whatsapp_rust::message_range(through, None, Vec::new());
                 let result = client
                     .chat_actions()
@@ -10049,6 +10134,185 @@ impl Worker {
             });
             break;
         }
+    }
+
+    fn save_ai_api_key(&self, provider: crate::ai::AiProvider, key: crate::ai::ApiKey) {
+        let events = self.events.clone();
+        let waker = self.waker.clone();
+        let saved = !key.expose().trim().is_empty();
+        let spawned = std::thread::Builder::new()
+            .name("ai-keyring".into())
+            .spawn(move || {
+                let result = crate::archive::store_ai_api_key(provider.keyring_id(), key.expose())
+                    .map_err(|error| error.to_string());
+                let _ = events.send(Event::AiKeySaved {
+                    provider,
+                    saved,
+                    result,
+                });
+                waker.wake();
+            });
+        if let Err(error) = spawned {
+            log::debug!("could not start AI key storage: {error}");
+            self.emit(Event::AiKeySaved {
+                provider,
+                saved: false,
+                result: Err("Could not start API key storage".into()),
+            });
+        }
+    }
+
+    fn list_ai_models(&self, request: u64, provider: crate::ai::AiProvider, endpoint: String) {
+        let events = self.events.clone();
+        let waker = self.waker.clone();
+        let spawned = std::thread::Builder::new()
+            .name("ai-models".into())
+            .spawn(move || {
+                let models = crate::ai::list_models(provider, &endpoint);
+                let _ = events.send(Event::AiModels {
+                    provider,
+                    request,
+                    models,
+                });
+                waker.wake();
+            });
+        if let Err(error) = spawned {
+            log::debug!("could not start AI model discovery: {error}");
+            self.emit(Event::AiModels {
+                provider,
+                request,
+                models: Err("Could not start model discovery".into()),
+            });
+        }
+    }
+
+    fn draft_ai_reply(&self, request: crate::ai::DraftRequest) {
+        let crate::ai::DraftRequest {
+            request,
+            chat,
+            provider,
+            endpoint,
+            model,
+            style,
+            message,
+            message_id,
+            context_messages,
+        } = request;
+        let prompt = match (chat.as_deref(), message_id.as_deref()) {
+            (Some(chat_id), Some(message_id)) => {
+                match self.ai_context(chat_id, message_id, context_messages) {
+                    Ok(history) => message.with_history(history),
+                    Err(error) => {
+                        self.emit(Event::AiDraft {
+                            request,
+                            chat: chat.clone(),
+                            result: crate::ai::DraftResult(Err(error)),
+                        });
+                        return;
+                    }
+                }
+            }
+            _ => message,
+        };
+        let events = self.events.clone();
+        let waker = self.waker.clone();
+        let target = chat.clone();
+        let spawned = std::thread::Builder::new()
+            .name("ai-draft".into())
+            .spawn(move || {
+                let result = crate::ai::DraftResult(crate::ai::draft(
+                    provider, &endpoint, &model, &style, &prompt,
+                ));
+                let _ = events.send(Event::AiDraft {
+                    request,
+                    chat: target,
+                    result,
+                });
+                waker.wake();
+            });
+        if let Err(error) = spawned {
+            log::debug!("could not start AI draft: {error}");
+            self.emit(Event::AiDraft {
+                request,
+                chat,
+                result: crate::ai::DraftResult(Err("Could not start the AI request".into())),
+            });
+        }
+    }
+
+    fn ai_context(
+        &self,
+        chat: &str,
+        message_id: &str,
+        context_messages: Option<usize>,
+    ) -> Result<Vec<crate::ai::PromptMessage>, String> {
+        const PAGE_SIZE: usize = 256;
+        let target = self
+            .archive
+            .message(chat, message_id)
+            .map_err(|error| error.to_string())?
+            .ok_or_else(|| "The selected message is no longer in the local archive".to_owned())?;
+        let previous_count = context_messages.map(|count| count.saturating_sub(1));
+        let mut history = Vec::new();
+        match previous_count {
+            Some(0) => {}
+            Some(limit) => {
+                history = self
+                    .archive
+                    .messages(
+                        chat,
+                        Some((target.timestamp, &target.id)),
+                        limit.min(100_000),
+                    )
+                    .map_err(|error| error.to_string())?;
+            }
+            None => {
+                let mut cursor = Some((target.timestamp, target.id.clone()));
+                let mut pages = Vec::new();
+                loop {
+                    let boundary = cursor
+                        .as_ref()
+                        .map(|(timestamp, id)| (*timestamp, id.as_str()));
+                    let page = self
+                        .archive
+                        .messages(chat, boundary, PAGE_SIZE)
+                        .map_err(|error| error.to_string())?;
+                    if page.is_empty() {
+                        break;
+                    }
+                    let exhausted = page.len() < PAGE_SIZE;
+                    cursor = page
+                        .first()
+                        .map(|message| (message.timestamp, message.id.clone()));
+                    pages.push(page);
+                    if exhausted {
+                        break;
+                    }
+                }
+                for mut page in pages.into_iter().rev() {
+                    history.append(&mut page);
+                }
+            }
+        }
+        Ok(history
+            .into_iter()
+            .filter(|message| {
+                !matches!(
+                    message.content,
+                    crate::model::Content::Revoked
+                        | crate::model::Content::DisappearingTimer { .. }
+                )
+            })
+            .map(|message| {
+                let role = if message.from_me {
+                    crate::ai::PromptRole::Assistant
+                } else {
+                    crate::ai::PromptRole::User
+                };
+                let content = message.content.summary_in(crate::i18n::Locale::English);
+                crate::ai::PromptMessage::new(role, content)
+            })
+            .collect())
     }
 
     fn send_read_receipts(&self, chat: ChatId, ids: Vec<(String, String)>) {
@@ -12190,6 +12454,31 @@ fn read_receipt_batches(
         batches.entry((list, sender)).or_default().push(id);
     }
     batches
+}
+
+fn hold_read_receipts(
+    pending: &mut HashMap<ChatId, Vec<(String, String)>>,
+    chat: ChatId,
+    receipts: Vec<(String, String)>,
+) {
+    let queued = pending.entry(chat).or_default();
+    for receipt in receipts {
+        if !queued.contains(&receipt) {
+            queued.push(receipt);
+        }
+    }
+}
+
+fn take_pending_read_receipts(
+    pending: &mut HashMap<ChatId, Vec<(String, String)>>,
+    chat: &str,
+    send_succeeded: bool,
+) -> Vec<(String, String)> {
+    if send_succeeded {
+        pending.remove(chat).unwrap_or_default()
+    } else {
+        Vec::new()
+    }
 }
 
 /// The message an edit, a deletion or a reaction names.
@@ -14645,6 +14934,63 @@ fn clear_boundary(read: crate::archive::Result<Vec<Message>>) -> Option<i64> {
 mod tests {
     use super::*;
     use std::io::Cursor;
+
+    fn ai_context_message(id: &str, timestamp: i64, from_me: bool, text: &str) -> Message {
+        Message {
+            id: id.into(),
+            chat: "15550001111@s.whatsapp.net".into(),
+            sender: if from_me {
+                "15550001111@s.whatsapp.net".into()
+            } else {
+                "15550002222@s.whatsapp.net".into()
+            },
+            sender_name: None,
+            from_me,
+            timestamp,
+            history_order: None,
+            content: Content::Text {
+                text: text.into(),
+                preview: None,
+            },
+            status: Delivery::None,
+            delivered_at: None,
+            read_at: None,
+            quoted: None,
+            reactions: Vec::new(),
+            edited: false,
+            mentions: Vec::new(),
+            forwarded: false,
+            thumbnail: None,
+        }
+    }
+
+    #[test]
+    fn ai_context_uses_only_messages_before_the_selected_incoming_message() {
+        let (worker, _, _, _) = super::receipt_tests::worker();
+        let chat = "15550001111@s.whatsapp.net";
+        for message in [
+            ai_context_message("old", 10, false, "older incoming"),
+            ai_context_message("reply", 20, true, "our previous reply"),
+            ai_context_message("target", 30, false, "message to answer"),
+            ai_context_message("later", 40, true, "sent after the target"),
+        ] {
+            worker.archive.insert_message(&message, None).unwrap();
+        }
+
+        let context = worker.ai_context(chat, "target", Some(3)).unwrap();
+        assert_eq!(context.len(), 2);
+        assert_eq!(context[0].role, crate::ai::PromptRole::User);
+        assert_eq!(context[0].content, "older incoming");
+        assert_eq!(context[1].role, crate::ai::PromptRole::Assistant);
+        assert_eq!(context[1].content, "our previous reply");
+
+        let all = worker.ai_context(chat, "target", None).unwrap();
+        assert_eq!(all.len(), 2);
+        assert!(
+            all.iter()
+                .all(|turn| turn.content != "sent after the target")
+        );
+    }
 
     #[tokio::test]
     async fn a_lost_socket_without_a_disconnect_event_starts_reconnecting() {
@@ -20128,6 +20474,9 @@ mod receipt_tests {
             stars_recovering: false,
             downloads: HashSet::new(),
             read_sync: ReadSync::default(),
+            pending_read_receipts: HashMap::new(),
+            pending_read_sync: HashSet::new(),
+            keep_deleted_messages: true,
             favorite_chats: Default::default(),
             poll_decrypting: 0,
             poll_history: Default::default(),
@@ -23235,7 +23584,7 @@ mod receipt_tests {
         worker.store_message(incoming("a", 100), None, None);
         worker.store_message(incoming("b", 200), None, None);
         assert_eq!(unread(&worker), 2);
-        worker.mark_read(PEER.into(), false);
+        worker.mark_read(PEER.into(), false, false);
         assert_eq!(unread(&worker), 0);
         assert_eq!(
             worker.archive.pending_reads().unwrap(),
@@ -23258,11 +23607,33 @@ mod receipt_tests {
         );
     }
 
+    #[test]
+    fn deferred_reads_do_not_send_receipts_or_linked_device_sync_until_a_send() {
+        let (mut worker, _events, _inbox, _wa) = worker();
+        worker.store_message(incoming("deferred", 100), None, None);
+
+        worker.mark_read(PEER.into(), true, true);
+
+        assert_eq!(unread(&worker), 0, "local unread state clears immediately");
+        assert!(worker.archive.pending_reads().unwrap().is_empty());
+        assert!(worker.pending_read_sync.contains(PEER));
+        assert_eq!(worker.pending_read_receipts.get(PEER).unwrap().len(), 1);
+
+        worker.release_deferred_read(&PEER.into());
+
+        assert!(worker.pending_read_sync.is_empty());
+        assert!(worker.pending_read_receipts.is_empty());
+        assert_eq!(
+            worker.archive.pending_reads().unwrap(),
+            vec![(PEER.into(), 100)]
+        );
+    }
+
     #[tokio::test]
     async fn a_failed_read_sync_stays_queued_until_it_succeeds() {
         let (mut worker, _events, _inbox, _wa) = worker();
         worker.store_message(incoming("a", 100), None, None);
-        worker.mark_read(PEER.into(), false);
+        worker.mark_read(PEER.into(), false, false);
         let now = Instant::now();
         assert!(worker.read_sync.start(PEER, 100, now));
         worker
@@ -23280,7 +23651,7 @@ mod receipt_tests {
         assert!(!worker.read_sync.start("another-chat", 200, Instant::now()));
         // A new local read stays queued while the shared collection backs off.
         worker.store_message(incoming("b", 200), None, None);
-        worker.mark_read(PEER.into(), false);
+        worker.mark_read(PEER.into(), false, false);
         assert!(
             worker
                 .read_sync
@@ -23334,7 +23705,7 @@ mod receipt_tests {
     async fn a_chat_marked_unread_on_the_phone_shows_the_empty_dot() {
         let (mut worker, _events, _inbox, _wa) = worker();
         worker.store_message(incoming("a", 100), None, None);
-        worker.mark_read(PEER.into(), false);
+        worker.mark_read(PEER.into(), false, false);
         phone_marks(&mut worker, false).await;
         assert!(marked(&worker));
         assert_eq!(unread(&worker), 0, "the phone's mark invents no count");
@@ -23350,7 +23721,7 @@ mod receipt_tests {
     async fn a_chat_marked_unread_here_reaches_the_phone_and_opening_it_reads_it() {
         let (mut worker, _events, _inbox, _wa) = worker();
         worker.store_message(incoming("a", 100), None, None);
-        worker.mark_read(PEER.into(), false);
+        worker.mark_read(PEER.into(), false, false);
         worker.archive.finish_read_sync(PEER, i64::MAX).unwrap();
         worker
             .handle_command(Command::MarkUnread(PEER.into()))
@@ -23375,7 +23746,7 @@ mod receipt_tests {
         assert!(worker.archive.pending_unreads().unwrap().is_empty());
         // Opening the chat reads it, and the read goes to the phone even
         // though no message was pending, since that clears the phone's mark.
-        worker.mark_read(PEER.into(), false);
+        worker.mark_read(PEER.into(), false, false);
         assert!(!marked(&worker));
         assert_eq!(worker.archive.pending_reads().unwrap().len(), 1);
     }
@@ -23620,7 +23991,7 @@ mod receipt_tests {
     fn rapid_messages_keep_distinct_read_positions_within_the_same_second() {
         let (mut worker, _events, _inbox, _wa) = worker();
         worker.store_message(incoming("first", 100), None, None);
-        worker.mark_read(PEER.into(), false);
+        worker.mark_read(PEER.into(), false, false);
         worker.store_message(incoming("second", 100), None, None);
         worker.store_message(incoming("third", 100), None, None);
         assert_eq!(unread(&worker), 2);
@@ -23673,7 +24044,7 @@ mod receipt_tests {
             .insert_message(&notice, None)
             .expect("timer notice");
 
-        worker.mark_read(PEER.into(), false);
+        worker.mark_read(PEER.into(), false, false);
         assert_eq!(worker.archive.read_through(PEER).unwrap(), Some(100));
 
         worker.store_message(incoming("late-delivery", 300), None, None);
@@ -24822,7 +25193,7 @@ mod receipt_tests {
     }
 
     #[test]
-    fn edits_and_revokes_of_a_broadcast_list_message_reach_its_row() {
+    fn edits_are_applied_and_revokes_keep_the_local_broadcast_copy() {
         use wa::message::protocol_message::Type;
         let (mut worker, _events, _inbox, _wa) = worker();
         worker.ingest(
@@ -24841,7 +25212,7 @@ mod receipt_tests {
             &list_info("revoke", 120),
         );
         let row = worker.archive.message(PEER, "m").unwrap().unwrap();
-        assert_eq!(row.content, Content::Revoked);
+        assert_eq!(row.content, Content::text("Edited fixture"));
         assert!(broadcast_chats(&worker).is_empty());
     }
 
@@ -24935,6 +25306,40 @@ mod receipt_tests {
     }
 
     #[test]
+    fn read_receipts_wait_until_a_message_is_sent_in_the_same_chat() {
+        let mut pending = HashMap::new();
+        hold_read_receipts(
+            &mut pending,
+            PEER.into(),
+            vec![
+                ("read-1".into(), PEER.into()),
+                ("read-2".into(), PEER.into()),
+            ],
+        );
+        hold_read_receipts(
+            &mut pending,
+            PEER.into(),
+            vec![("read-1".into(), PEER.into())],
+        );
+        hold_read_receipts(
+            &mut pending,
+            "other@s.whatsapp.net".into(),
+            vec![("other-read".into(), "other@s.whatsapp.net".into())],
+        );
+
+        assert!(take_pending_read_receipts(&mut pending, PEER, false).is_empty());
+        assert_eq!(pending.get(PEER).unwrap().len(), 2);
+        assert_eq!(
+            take_pending_read_receipts(&mut pending, PEER, true),
+            vec![
+                ("read-1".into(), PEER.into()),
+                ("read-2".into(), PEER.into())
+            ]
+        );
+        assert!(pending.contains_key("other@s.whatsapp.net"));
+    }
+
+    #[test]
     fn read_receipts_for_broadcast_list_messages_go_to_the_list_with_their_sender() {
         let list = Some(LIST.to_owned());
         let direct = read_receipt_batches(
@@ -24992,7 +25397,7 @@ mod receipt_tests {
         worker.archive.bump_unread(LIST).unwrap();
         // The contact's own chat, already holding an older message.
         worker.store_message(incoming("old", 50), None, None);
-        worker.mark_read(PEER.into(), false);
+        worker.mark_read(PEER.into(), false, false);
         // A list of another contact, never known under a privacy id.
         let stranger = "12025550123@s.whatsapp.net";
         worker.archive.ensure_chat(other_list, "~Stranger").unwrap();
@@ -25159,7 +25564,7 @@ mod receipt_tests {
             .unwrap();
         worker.adopt_broadcast_lists();
         let row = worker.archive.message(PEER, "m").unwrap().unwrap();
-        assert_eq!(row.content, Content::Revoked);
+        assert_eq!(row.content, Content::text("hi"));
     }
 
     #[test]
@@ -25419,8 +25824,7 @@ mod receipt_tests {
     }
 
     /// A message stays in the list chat because the contact's chat was
-    /// cleared past it. The contact then deletes it for everyone through
-    /// the list: the deletion reaches the copy in the list chat.
+    /// cleared past it. The sender's revoke does not erase the local copy.
     #[test]
     fn a_deletion_for_everyone_reaches_a_message_left_in_the_list_chat() {
         let (mut worker, _e, _i, _w) = worker();
@@ -25451,7 +25855,7 @@ mod receipt_tests {
                 .unwrap()
                 .unwrap()
                 .content,
-            Content::Revoked
+            Content::text("message old")
         );
         assert!(worker.archive.message(PEER, "old").unwrap().is_none());
     }

@@ -1,0 +1,2182 @@
+diff --git a/assets/i18n/pt-BR.po b/assets/i18n/pt-BR.po
+index 67238a6..16e98b4 100644
+--- a/assets/i18n/pt-BR.po
++++ b/assets/i18n/pt-BR.po
+@@ -800,6 +800,14 @@ msgstr "Remover sua reação"
+ msgid "Reply privately"
+ msgstr "Responder em particular"
+ 
++#: src/ui/conversation.rs:7530
++msgid "Stop ignoring in this group"
++msgstr "Parar de ignorar neste grupo"
++
++#: src/ui/conversation.rs:7532
++msgid "Ignore in this group"
++msgstr "Ignorar neste grupo"
++
+ #: src/ui/conversation.rs:7020 src/ui/conversation.rs:7376
+ msgid "Star"
+ msgstr "Marcar com estrela"
+@@ -1719,6 +1727,14 @@ msgstr ""
+ msgid "Chats"
+ msgstr "Conversas"
+ 
++#: src/ui/settings.rs:510
++msgid "Ignored in this group."
++msgstr "Esta pessoa está sendo ignorada neste grupo."
++
++#: src/ui/settings.rs:516
++msgid "Unignore"
++msgstr "Deixar de ignorar"
++
+ #: src/ui/settings.rs:430
+ msgid "Enter sends"
+ msgstr "Enter envia"
+@@ -1794,6 +1810,14 @@ msgid "For chats you are not looking at. Muted chats stay quiet."
+ msgstr ""
+ "Para conversas que você não está vendo. Conversas silenciadas ficam quietas."
+ 
++#: src/ui/settings.rs:569
++msgid "Channel notifications"
++msgstr "Notificações de canais"
++
++#: src/ui/settings.rs:570
++msgid "Show desktop notifications for WhatsApp Channels."
++msgstr "Mostrar notificações dos Canais do WhatsApp na área de trabalho."
++
+ #: src/ui/settings.rs:529
+ msgid "Show message content in notifications"
+ msgstr "Mostrar o conteúdo das mensagens nas notificações"
+@@ -1839,6 +1863,22 @@ msgstr "Permite que as pessoas vejam quando você lê as mensagens delas."
+ msgid "Send read receipts"
+ msgstr "Enviar confirmações de leitura"
+ 
++#: src/ui/settings.rs:668
++msgid "Defer read receipts until you send a message"
++msgstr "Adiar confirmações de leitura até enviar uma mensagem"
++
++#: src/ui/settings.rs:671
++msgid "Read state stays local. Receipts are sent after your message is sent in that chat."
++msgstr "O estado de leitura fica local. As confirmações são enviadas depois que você manda uma mensagem nesse chat."
++
++#: src/ui/settings.rs:676
++msgid "Keep messages deleted by others"
++msgstr "Manter mensagens apagadas por outras pessoas"
++
++#: src/ui/settings.rs:679
++msgid "Keep the local copy of incoming messages after the sender deletes them."
++msgstr "Guardar uma cópia local das mensagens recebidas mesmo depois que o remetente as apagar."
++
+ #: src/ui/settings.rs:587
+ msgid "Show when you are typing"
+ msgstr "Mostrar quando você está digitando"
+@@ -2511,6 +2551,10 @@ msgstr "Esta mensagem não está mais disponível."
+ msgid "Played"
+ msgstr "Reproduzida"
+ 
++#: src/ui/conversation.rs
++msgid "Played · Message info"
++msgstr "Reproduzida · Informações da mensagem"
++
+ #: src/ui/message_info.rs:194
+ msgid "Read"
+ msgstr "Lida"
+@@ -3377,6 +3421,14 @@ msgstr "Adicionar foto do grupo"
+ msgid "Description"
+ msgstr "Descrição"
+ 
++#: src/ui/info.rs
++msgid "Hide description"
++msgstr "Ocultar descrição"
++
++#: src/ui/info.rs
++msgid "Show description"
++msgstr "Mostrar descrição"
++
+ #: src/ui/info.rs:701
+ #, fuzzy
+ msgid "Edit group description"
+@@ -3388,7 +3440,19 @@ msgstr ""
+ 
+ #: src/ui/info.rs:903 src/ui/new_group.rs:76
+ msgid "Add members"
+-msgstr ""
++msgstr "Adicionar membros"
++
++#: src/ui/info.rs
++msgid "Search members"
++msgstr "Buscar membros"
++
++#: src/ui/info.rs
++msgid "Members"
++msgstr "Membros"
++
++#: src/ui/info.rs
++msgid "No members match that search."
++msgstr "Nenhum membro corresponde à busca."
+ 
+ #: src/ui/info.rs:957
+ #, rust-format
+@@ -4097,6 +4161,218 @@ msgstr "Reproduzida"
+ msgid "not sent"
+ msgstr "Enter envia"
+ 
++#: src/ui/settings.rs
++msgid "AI provider"
++msgstr "Provedor de IA"
++
++#: src/ui/settings.rs
++msgid "Choose where requested drafts are generated."
++msgstr "Escolha onde os rascunhos serão gerados."
++
++#: src/ui/settings.rs
++msgid "Conversation context"
++msgstr "Contexto da conversa"
++
++#: src/ui/settings.rs
++msgid "Number of recent messages to include, counting the message being answered. All uses locally archived messages."
++msgstr "Quantidade de mensagens recentes a incluir, contando a mensagem que será respondida. A opção Todas usa as mensagens já arquivadas localmente."
++
++#: src/ui/settings.rs
++msgid "All messages"
++msgstr "Todas as mensagens"
++
++#: src/ui/settings.rs
++msgid "When you request a draft, hosted providers receive the context selected below. Review the provider's privacy policy before using one. Nothing is sent automatically."
++msgstr "Quando você pede uma sugestão, provedores hospedados recebem o contexto selecionado abaixo. Consulte a política de privacidade do provedor antes de usá-lo. Nada é enviado automaticamente."
++
++#: src/ui/settings.rs
++msgid "Optional for local servers. Stored in your operating system's keyring."
++msgstr "Opcional em servidores locais. Armazenada no chaveiro do sistema operacional."
++
++#: src/ui/settings.rs
++msgid "Required for this provider. Stored in your operating system's keyring."
++msgstr "Obrigatória para este provedor. Armazenada no chaveiro do sistema operacional."
++
++#: src/ai.rs
++msgid "OpenAI (ChatGPT)"
++msgstr "OpenAI (ChatGPT)"
++
++#: src/ai.rs
++msgid "DeepSeek"
++msgstr "DeepSeek"
++
++#: src/ai.rs
++msgid "Anthropic (Claude)"
++msgstr "Anthropic (Claude)"
++
++#: src/ai.rs
++msgid "Google (Gemini)"
++msgstr "Google (Gemini)"
++
++#: src/ai.rs
++msgid "OpenRouter"
++msgstr "OpenRouter"
++
++#: src/ai.rs
++msgid "Local (Ollama / LM Studio)"
++msgstr "Local (Ollama / LM Studio)"
++
++#: src/ui/settings.rs
++msgid "Model"
++msgstr "Modelo"
++
++#: src/ui/settings.rs
++msgid "Choose a model reported by the selected provider."
++msgstr "Escolha um modelo disponibilizado pelo provedor selecionado."
++
++#: src/ui/settings.rs
++msgid "Model identifier"
++msgstr "Identificador do modelo"
++
++#: src/ui/settings.rs
++msgid "Provider API key"
++msgstr "Chave de API do provedor"
++
++#: src/ui/settings.rs
++msgid "Stored in your operating system's keyring."
++msgstr "Armazenada no chaveiro do sistema operacional."
++
++#: src/ui/settings.rs
++msgid "Enter provider API key"
++msgstr "Insira a chave de API do provedor"
++
++#: src/ui/settings.rs
++msgid "Key removed from the OS keyring"
++msgstr "Chave removida do chaveiro do sistema"
++
++#: src/ui/settings.rs
++msgid "AI drafts"
++msgstr "Rascunhos com IA"
++
++#: src/ui/settings.rs
++msgid "Local model endpoint"
++msgstr "Endereço do modelo local"
++
++#: src/ui/settings.rs
++msgid "Only loopback servers are allowed. Ollama and LM Studio support this API."
++msgstr "Só servidores locais são permitidos. Ollama e LM Studio oferecem essa API."
++
++#: src/ai.rs
++msgid "A local model URL must point to localhost or a loopback IP"
++msgstr "O endereço de um modelo local deve apontar para localhost ou um IP de loopback"
++
++#: src/ui/settings.rs
++msgid "Local model"
++msgstr "Modelo local"
++
++#: src/ui/settings.rs
++msgid "Refresh the list after starting your local model server."
++msgstr "Atualize a lista depois de iniciar o servidor do modelo local."
++
++#: src/ui/settings.rs
++msgid "Choose a model"
++msgstr "Escolha um modelo"
++
++#: src/ui/settings.rs
++msgid "Local API key"
++msgstr "Chave de API local"
++
++#: src/ui/settings.rs
++msgid "Optional. Stored in your operating system's keyring."
++msgstr "Opcional. Armazenada no chaveiro do sistema operacional."
++
++#: src/ui/settings.rs
++msgid "API key (optional)"
++msgstr "Chave de API (opcional)"
++
++#: src/ui/settings.rs
++msgid "Saving key…"
++msgstr "Salvando chave…"
++
++#: src/ui/settings.rs
++msgid "Key saved in the OS keyring"
++msgstr "Chave salva no chaveiro do sistema"
++
++#: src/ui/settings.rs
++msgid "Could not save key"
++msgstr "Não foi possível salvar a chave"
++
++#: src/ui/settings.rs
++msgid "Available models"
++msgstr "Modelos disponíveis"
++
++#: src/ui/settings.rs
++msgid "Model names are fetched from the selected provider when you refresh."
++msgstr "Os nomes dos modelos são buscados no provedor selecionado ao atualizar a lista."
++
++#: src/ui/settings.rs
++msgid "Refresh models"
++msgstr "Atualizar modelos"
++
++#: src/ui/settings.rs
++msgid "Synthetic reply test"
++msgstr "Teste de resposta fictícia"
++
++#: src/ui/settings.rs
++msgid "Uses only the sample text below, never a real conversation."
++msgstr "Usa apenas o texto de exemplo abaixo, nunca uma conversa real."
++
++#: src/ui/settings.rs
++msgid "Synthetic message"
++msgstr "Mensagem fictícia"
++
++#: src/ui/settings.rs
++msgid "Test selected model"
++msgstr "Testar modelo selecionado"
++
++#: src/ui/info.rs
++msgid "Draft replies with AI"
++msgstr "Rascunhar respostas com IA"
++
++#: src/ui/info.rs
++msgid "Only this contact. Uses the context configured in AI settings when requested. Nothing is sent automatically."
++msgstr "Só para este contato. Usa o contexto definido nas configurações de IA quando você pede uma sugestão. Nada é enviado automaticamente."
++
++#: src/ui/info.rs
++msgid "How should the AI sound?"
++msgstr "Como a IA deve responder?"
++
++#: src/ui/conversation.rs
++msgid "Draft reply with AI"
++msgstr "Rascunhar resposta com IA"
++
++#: src/ui/conversation.rs
++msgid "AI draft"
++msgstr "Rascunho da IA"
++
++#: src/ui/conversation.rs
++msgid "Use draft"
++msgstr "Usar rascunho"
++
++#: src/ui/conversation.rs
++msgid "Discard draft"
++msgstr "Descartar rascunho"
++
++#: src/app.rs
++msgid "AI draft ready to review above the composer."
++msgstr "Sugestão da IA pronta para revisar acima do campo de mensagem."
++
++#: src/ui/conversation.rs
++msgid "Generating AI reply suggestion…"
++msgstr "Gerando sugestão de resposta com IA…"
++
++#: src/ui/settings.rs
++msgid "Draft preview"
++msgstr "Prévia do rascunho"
++
++#: src/app.rs
++msgid "Choose a model in AI settings."
++msgstr "Escolha um modelo nas configurações de IA."
++
++#: src/app.rs
++msgid "There is no incoming message to answer yet."
++msgstr "Ainda não há mensagem recebida para responder."
++
+ #~ msgid "Back to the chats"
+ #~ msgstr "Voltar para as conversas"
+ 
+diff --git a/docs/_guide/using-zapfast.md b/docs/_guide/using-zapfast.md
+index e38416d..f7c7de3 100644
+--- a/docs/_guide/using-zapfast.md
++++ b/docs/_guide/using-zapfast.md
+@@ -22,6 +22,20 @@ After five seconds without input, the text cursor stays visible without
+ blinking; it starts blinking again when you use the window.
+ The emoji picker stays open while you choose emoji and closes when you send
+ the text.
++
++For a direct chat where AI drafts are enabled in the person's info panel, use
++the message-circle button beside the composer to request a reply suggestion.
++When it is ready, a review strip appears above the composer. **Use draft** puts
++the suggestion into the composer without sending it; **Discard draft** removes
++it. Your existing unsent text is left unchanged.
++In **Settings > AI drafts**, choose how many recent messages to include,
++counting the incoming message being answered, or choose **All messages** to use
++all messages already in ZapFast's local archive up to that point. It does not
++fetch older history from the phone for a draft. A hosted provider receives the
++selected context only when you request a suggestion; check its privacy policy
++before use. The context setting applies to chat drafts, not the synthetic API
++test in Settings.
++
+ `*bold*`, `_italic_`, `~strike~`, and ```` ```monospace ```` ```` format
+ like WhatsApp, and a message of nothing but emoji shows large. Select text in
+ the composer and right-click (or press Shift+F10 while it is focused) for
+@@ -899,6 +913,8 @@ most shared links carry, lands in the composer without being sent, so you can
+ edit it or add to it before sending. The composer keeps whatever you were
+ already typing, and a chat with unsent text of your own keeps it: a template
+ never replaces a draft you wrote.
++Clicking a valid `wa.me` or `api.whatsapp.com/send` link in a message opens that
++chat in ZapFast instead of the browser.
+ 
+ A `chat.whatsapp.com` group invite link given to `zapfast` shows the same
+ invite as clicking it in a message: the group is looked up, and you choose
+diff --git a/src/account.rs b/src/account.rs
+index a2f5f1c..7dafe51 100644
+--- a/src/account.rs
++++ b/src/account.rs
+@@ -122,6 +122,9 @@ pub struct Account {
+     /// Ids of the starred messages of each chat, for the mark in the
+     /// conversation. Filled when a chat opens and on every confirmed star.
+     pub stars: HashMap<ChatId, HashSet<String>>,
++    /// Messages whose original contents were kept after their sender revoked
++    /// them for everyone.
++    pub recovered_messages: HashSet<(ChatId, String)>,
+     /// Ids of each chat's pinned messages, for its menu and its bubble mark.
+     pub pins: HashMap<ChatId, HashSet<String>>,
+     /// Active pins of each chat, for the line under its header.
+@@ -163,6 +166,9 @@ impl Account {
+         backend: Backend,
+     ) -> Self {
+         let open_chat = settings.last_chat.clone();
++        if !settings.keep_deleted_messages {
++            backend.send(crate::backend::Command::SetKeepDeletedMessages(false));
++        }
+         let chat_filter = match settings
+             .list_filter
+             .as_deref()
+@@ -247,6 +253,7 @@ impl Account {
+             starred: Vec::new(),
+             show_starred: false,
+             stars: HashMap::new(),
++            recovered_messages: HashSet::new(),
+             pins: HashMap::new(),
+             chat_pins: HashMap::new(),
+             reply_when_loaded: None,
+diff --git a/src/backend.rs b/src/backend.rs
+index 1abbb76..9414823 100644
+--- a/src/backend.rs
++++ b/src/backend.rs
+@@ -265,7 +265,11 @@ pub enum Command {
+     MarkRead {
+         chat: ChatId,
+         receipts: bool,
++        defer_receipts: bool,
+     },
++    /// Controls whether messages revoked by other participants remain in the
++    /// encrypted local archive.
++    SetKeepDeletedMessages(bool),
+     /// Marks a chat with nothing pending as unread, here and on the phone.
+     MarkUnread(ChatId),
+     /// Follows one of our group messages' receipts while "Message info" is
+@@ -349,6 +353,19 @@ pub enum Command {
+     SearchMessages {
+         query: String,
+     },
++    /// Stores a provider key in the OS keyring.
++    SetAiApiKey {
++        provider: crate::ai::AiProvider,
++        key: crate::ai::ApiKey,
++    },
++    /// Lists current models from the selected provider.
++    ListAiModels {
++        request: u64,
++        provider: crate::ai::AiProvider,
++        endpoint: String,
++    },
++    /// Drafts one response from one selected message, or from simulator text.
++    DraftAiReply(crate::ai::DraftRequest),
+     /// Searches one chat, optionally inside a Unix-second day range.
+     SearchChatMessages {
+         chat: ChatId,
+@@ -1232,6 +1249,24 @@ pub enum Event {
+     Labels(Vec<crate::model::Label>),
+     /// Unsent text stored for each chat, sent once at startup.
+     Drafts(Vec<(ChatId, String)>),
++    /// Result of saving one provider key.
++    AiKeySaved {
++        provider: crate::ai::AiProvider,
++        saved: bool,
++        result: Result<(), String>,
++    },
++    /// Models reported by the selected provider.
++    AiModels {
++        provider: crate::ai::AiProvider,
++        request: u64,
++        models: Result<Vec<String>, String>,
++    },
++    /// A generated draft for a direct chat or the synthetic simulator.
++    AiDraft {
++        request: u64,
++        chat: Option<ChatId>,
++        result: crate::ai::DraftResult,
++    },
+     /// The starred messages of one chat, for the mark in the conversation.
+     Stars {
+         chat: ChatId,
+@@ -1296,6 +1331,13 @@ pub enum Event {
+         older: bool,
+         complete: bool,
+     },
++    /// A locally retained message was revoked by its sender, or its marker
++    /// was removed with the message.
++    RecoveredMessage {
++        chat: ChatId,
++        message: String,
++        recovered: bool,
++    },
+     /// History toward a message (`Command::LoadUntil`) that could not be
+     /// read, and why. It ends the chat's wait for older history as an empty
+     /// older page does, and is one event so that the replied-message jump
+diff --git a/src/demo.rs b/src/demo.rs
+index 2b6112d..5af1bc5 100644
+--- a/src/demo.rs
++++ b/src/demo.rs
+@@ -11192,8 +11192,8 @@ mod tests {
+         };
+         for (page, permissions, add, link, reset, menus) in [
+             ("group-admin", true, true, true, true, true),
+-            ("group-info", false, true, true, false, false),
+-            ("group-info-locked", false, false, false, false, false),
++            ("group-info", false, true, true, false, true),
++            ("group-info-locked", false, false, false, false, true),
+         ] {
+             let mut app = app();
+             let ctx = egui::Context::default();
+@@ -11750,6 +11750,14 @@ mod tests {
+                         .group_description = description.map(str::to_owned);
+                     let ctx = egui::Context::default();
+                     app.attach(&ctx);
++                    if description.is_some_and(|text| !text.is_empty()) {
++                        ctx.data_mut(|data| {
++                            data.insert_temp(
++                                egui::Id::new(("group-description-expanded", SAMPLES[1].id)),
++                                true,
++                            );
++                        });
++                    }
+                     let mut shapes = Vec::new();
+                     for _ in 0..3 {
+                         let mut output = ctx.run_ui(
+@@ -11830,6 +11838,12 @@ mod tests {
+             .group_description = Some(description.into());
+         let ctx = egui::Context::default();
+         app.attach(&ctx);
++        ctx.data_mut(|data| {
++            data.insert_temp(
++                egui::Id::new(("group-description-expanded", SAMPLES[1].id)),
++                true,
++            );
++        });
+         let draw = |app: &mut App, events| {
+             let mut output = ctx.run_ui(
+                 egui::RawInput {
+diff --git a/src/lib.rs b/src/lib.rs
+index d388da9..bc9866c 100644
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -2,6 +2,7 @@
+ 
+ pub mod a11y;
+ pub mod account;
++pub mod ai;
+ pub mod animation;
+ pub mod announcer;
+ pub mod app;
+diff --git a/src/model.rs b/src/model.rs
+index 7a20199..882b553 100644
+--- a/src/model.rs
++++ b/src/model.rs
+@@ -3433,6 +3433,36 @@ pub enum Action {
+     /// Turns one account's desktop notifications on or off, from the account
+     /// switcher, without showing that account. It stays linked either way.
+     SetAccountNotifications(AccountId, bool),
++    /// Ignores one sender only in the named group, without blocking the
++    /// WhatsApp contact account-wide.
++    SetGroupSenderIgnored {
++        chat: ChatId,
++        sender: String,
++        ignored: bool,
++    },
++    /// Requests a draft for the latest incoming message in one enabled direct
++    /// chat, with the configured amount of local conversation context.
++    DraftAiReply(ChatId),
++    /// Tests the local model with the synthetic simulator text.
++    TestAiSimulator,
++    /// Refreshes the model list from the selected AI provider.
++    RefreshAiModels,
++    /// Sets how many recent conversation messages an AI draft may use.
++    SetAiContextMessages(Option<usize>),
++    /// Enables or disables local AI drafts for one direct chat.
++    SetAiChatEnabled {
++        chat: ChatId,
++        enabled: bool,
++    },
++    /// Changes the writing style used for this contact's drafts.
++    SetAiChatStyle {
++        chat: ChatId,
++        style: String,
++    },
++    /// Copies a generated draft into the composer for review.
++    UseAiSuggestion,
++    /// Discards a generated draft without sending it.
++    DiscardAiSuggestion,
+     /// Mutes until Unix time, indefinitely with `Some(0)`, or unmutes with `None`.
+     SetMuted(ChatId, Option<i64>),
+     /// Moves a chat into or out of the locked folder.
+diff --git a/src/settings.rs b/src/settings.rs
+index 9565e7a..aacee90 100644
+--- a/src/settings.rs
++++ b/src/settings.rs
+@@ -476,6 +476,15 @@ pub struct Settings {
+     pub reaction_emoji: Vec<(String, u32)>,
+     /// User GIPHY API key. Empty uses the optional built-in key.
+     pub giphy_key: String,
++    /// AI provider used for user-requested reply drafts.
++    pub ai_provider: crate::ai::AiProvider,
++    /// Base URL for a loopback OpenAI-compatible model server.
++    pub ai_endpoint: String,
++    /// Model name reported by the selected provider.
++    pub ai_model: String,
++    /// Maximum context messages sent with an AI draft; `None` uses all locally
++    /// archived messages up to the latest incoming message.
++    pub ai_context_messages: Option<usize>,
+     /// Keep the app linked in the tray when the window closes. On macOS,
+     /// where a closed ZapFast always stays in the Dock, whether it has a
+     /// menu-bar item.
+@@ -579,6 +588,10 @@ impl Default for Settings {
+             recent_emoji: Vec::new(),
+             reaction_emoji: Vec::new(),
+             giphy_key: String::new(),
++            ai_endpoint: "http://localhost:11434/v1".into(),
++            ai_provider: crate::ai::AiProvider::Local,
++            ai_model: String::new(),
++            ai_context_messages: Some(1),
+             keep_running_in_background: true,
+             notifications: true,
+             notification_content: true,
+@@ -818,16 +831,31 @@ impl Settings {
+     }
+ }
+ 
++/// AI draft preferences for one direct chat.
++#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
++#[serde(default)]
++pub struct AiChatSettings {
++    pub enabled: bool,
++    pub style: String,
++}
++
+ /// Preferences that belong to one WhatsApp account.
+ #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+ #[serde(default)]
+ pub struct AccountSettings {
+     pub send_read_receipts: bool,
++    pub defer_read_receipts_until_send: bool,
+     pub send_typing: bool,
+     #[serde(alias = "auto_download_images")]
+     pub auto_download: bool,
+     pub last_chat: Option<String>,
+     pub notifications: bool,
++    pub channel_notifications: bool,
++    pub keep_deleted_messages: bool,
++    /// Sender ids hidden in the named group, never account-wide blocks.
++    pub ignored_group_senders: std::collections::HashMap<String, Vec<String>>,
++    /// AI reply drafting is opt-in for each direct chat.
++    pub ai_chats: std::collections::HashMap<String, AiChatSettings>,
+     /// Which chats notify once, then stay quiet for ten minutes.
+     pub limit_notifications: NotificationLimit,
+     pub save_contacts_to_phone: bool,
+@@ -849,10 +877,15 @@ impl Default for AccountSettings {
+     fn default() -> Self {
+         Self {
+             send_read_receipts: true,
++            defer_read_receipts_until_send: true,
+             send_typing: true,
+             auto_download: true,
+             last_chat: None,
+             notifications: true,
++            channel_notifications: false,
++            keep_deleted_messages: true,
++            ignored_group_senders: Default::default(),
++            ai_chats: Default::default(),
+             limit_notifications: NotificationLimit::Off,
+             save_contacts_to_phone: true,
+             wallpaper_image: None,
+@@ -867,10 +900,15 @@ impl AccountSettings {
+     pub fn from_legacy(settings: &Settings) -> Self {
+         Self {
+             send_read_receipts: settings.send_read_receipts,
++            defer_read_receipts_until_send: true,
+             send_typing: settings.send_typing,
+             auto_download: settings.auto_download,
+             last_chat: settings.last_chat.clone(),
+             notifications: settings.notifications,
++            channel_notifications: false,
++            keep_deleted_messages: true,
++            ignored_group_senders: Default::default(),
++            ai_chats: Default::default(),
+             limit_notifications: NotificationLimit::Off,
+             save_contacts_to_phone: settings.save_contacts_to_phone,
+             wallpaper_image: settings.wallpaper_image.clone(),
+diff --git a/src/ui/chats.rs b/src/ui/chats.rs
+index 3a02d26..6f34365 100644
+--- a/src/ui/chats.rs
++++ b/src/ui/chats.rs
+@@ -1186,7 +1186,12 @@ fn row_scroll_offset(
+ fn results(app: &mut App, ui: &mut egui::Ui) {
+     let palette = app.palette;
+     let chats: Vec<Chat> = app.visible_chats().into_iter().cloned().collect();
+-    let hits: Vec<Message> = app.search_hits.clone();
++    let hits: Vec<Message> = app
++        .search_hits
++        .iter()
++        .filter(|message| !app.ignored_group_sender(&message.chat, &message.sender))
++        .cloned()
++        .collect();
+     let contacts: Vec<Contact> = app.matching_contacts().into_iter().cloned().collect();
+     let needle = crate::util::search_key(app.search.trim());
+     let offer_self = !needle.is_empty()
+diff --git a/src/ui/conversation.rs b/src/ui/conversation.rs
+index c3769e9..5bfe6c7 100644
+--- a/src/ui/conversation.rs
++++ b/src/ui/conversation.rs
+@@ -1511,6 +1511,17 @@ fn composer(app: &mut App, ui: &mut egui::Ui, chat: &Chat, review_send: Option<b
+             // An upload already under way stays cancellable while messages are
+             // selected or if the chat turns read-only.
+             upload_strips(app, ui, &chat.id);
++            if app.ai_draft_pending_for(&chat.id) {
++                ai_draft_pending_strip(app, ui);
++            }
++            let ai_suggestion = app
++                .ai_suggestion
++                .as_ref()
++                .filter(|(target, _)| target == &chat.id)
++                .map(|(_, text)| text.clone());
++            if let Some(suggestion) = ai_suggestion {
++                ai_suggestion_strip(app, ui, &suggestion);
++            }
+             if let Some((selected_chat, selected)) = app.selection.clone()
+                 && selected_chat == chat.id
+             {
+@@ -1744,7 +1755,33 @@ fn composer(app: &mut App, ui: &mut egui::Ui, chat: &Chat, review_send: Option<b
+                     ))
+                     .tab_stop(Stop::Attach);
+                     composer_tools_menu(app, chat, &tools);
+-                    // Plus and emoji sit close together, as a pair.
++                    let ai_enabled = !chat.is_group()
++                        && !chat.is_channel()
++                        && app
++                            .account()
++                            .settings
++                            .ai_chats
++                            .get(&chat.id)
++                            .is_some_and(|settings| settings.enabled);
++                    if ai_enabled {
++                        ui.add_space(COMPOSER_PAIR_GAP - ui.spacing().item_spacing.x);
++                        let draft = crate::i18n::gettext(app.locale, "Draft reply with AI");
++                        let response = last_line(ui, line, |ui| {
++                            theme::icon_button(
++                                ui,
++                                Icon::MessageCircle,
++                                22.0,
++                                palette.accent,
++                                palette.text,
++                                &draft,
++                            )
++                        })
++                        .tab_stop(Stop::AiDraft);
++                        if response.clicked() {
++                            app.actions.push(Action::DraftAiReply(chat.id.clone()));
++                        }
++                    }
++                    // The plus, optional AI action, and emoji sit close together.
+                     ui.add_space(COMPOSER_PAIR_GAP - ui.spacing().item_spacing.x);
+                     let smile = last_line(ui, line, |ui| theme::icon_button(
+                         ui,
+@@ -2260,6 +2297,57 @@ fn composer_pill(palette: &Palette) -> Frame {
+         })
+ }
+ 
++fn ai_suggestion_strip(app: &mut App, ui: &mut egui::Ui, suggestion: &str) {
++    let palette = app.palette;
++    let label = crate::i18n::gettext(app.locale, "AI draft");
++    let use_draft = crate::i18n::gettext(app.locale, "Use draft");
++    let discard = crate::i18n::gettext(app.locale, "Discard draft");
++    widgets::raised(ui, &palette, strip_frame(&palette), |ui| {
++        ui.set_width(ui.available_width());
++        ui.horizontal(|ui| {
++            theme::icon(ui, Icon::MessageCircle, 15.0, palette.accent);
++            theme::text(ui, label.as_ref(), theme::semibold(12.5), palette.text);
++            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
++                if theme::soft_button(ui, &palette, Some(Icon::X), &discard, false).clicked() {
++                    app.actions.push(Action::DiscardAiSuggestion);
++                }
++                if theme::soft_button(ui, &palette, Some(Icon::Check), &use_draft, false).clicked()
++                {
++                    app.actions.push(Action::UseAiSuggestion);
++                }
++            });
++        });
++        let line = widgets::line(
++            ui,
++            suggestion,
++            theme::regular(12.5),
++            palette.secondary,
++            ui.available_width(),
++            2,
++        );
++        let (rect, _) = ui.allocate_exact_size(line.size(), Sense::hover());
++        line.paint(ui, rect.min, palette.secondary);
++    });
++    strip_gap(ui);
++}
++
++fn ai_draft_pending_strip(app: &App, ui: &mut egui::Ui) {
++    let palette = app.palette;
++    widgets::raised(ui, &palette, strip_frame(&palette), |ui| {
++        ui.set_width(ui.available_width());
++        ui.horizontal(|ui| {
++            theme::spinner(ui, 14.0, palette.accent);
++            theme::text(
++                ui,
++                crate::i18n::gettext(app.locale, "Generating AI reply suggestion…"),
++                theme::regular(12.5),
++                palette.secondary,
++            );
++        });
++    });
++    strip_gap(ui);
++}
++
+ /// The plus menu beside the composer: send files, documents or a location,
+ /// or create a poll.
+ fn composer_tools_menu(app: &mut App, chat: &Chat, plus: &egui::Response) {
+@@ -2301,6 +2389,20 @@ fn composer_tools_menu(app: &mut App, chat: &Chat, plus: &egui::Response) {
+                     app.actions
+                         .push(Action::ShowDialog(Dialog::CreatePoll(chat.id.clone())));
+                 }
++                if !chat.is_group()
++                    && !chat.is_channel()
++                    && app
++                        .account()
++                        .settings
++                        .ai_chats
++                        .get(&chat.id)
++                        .is_some_and(|settings| settings.enabled)
++                {
++                    let draft = crate::i18n::gettext(app.locale, "Draft reply with AI");
++                    if widgets::menu_item(ui, &app.palette, Some(Icon::MessageCircle), &draft) {
++                        app.actions.push(Action::DraftAiReply(chat.id.clone()));
++                    }
++                }
+             });
+     }
+     if draw_open != app.composer_tools_open {
+@@ -2664,6 +2766,10 @@ struct View<'a> {
+     names_or: &'a dyn Fn(&str, Option<&str>) -> String,
+     /// Resolves mention names without replacing our name with "You".
+     mention_names: &'a dyn Fn(&str) -> String,
++    /// Sender ids hidden only in this group.
++    ignored_group_senders: &'a [String],
++    /// Messages whose original contents were kept after a revoke.
++    recovered_messages: &'a HashSet<(ChatId, String)>,
+     avatars: &'a HashMap<String, Option<PathBuf>>,
+     contacts: &'a HashMap<String, crate::model::Contact>,
+     now: i64,
+@@ -3125,6 +3231,13 @@ fn messages(app: &mut App, ui: &mut egui::Ui, chat: &Chat, under: f32) {
+         keyboard_navigation: &keyboard_navigation,
+         names_or: &names_or,
+         mention_names: &mention_names,
++        ignored_group_senders: app
++            .account()
++            .settings
++            .ignored_group_senders
++            .get(&chat.id)
++            .map_or(&[], Vec::as_slice),
++        recovered_messages: &app.account().recovered_messages,
+         avatars: &avatars,
+         contacts: &app.contacts,
+         now: crate::util::now(),
+@@ -3469,6 +3582,15 @@ fn messages(app: &mut App, ui: &mut egui::Ui, chat: &Chat, under: f32) {
+                     let margin = (viewport.height() * 3.0).max(600.0);
+                     for (message_index, message) in conversation.messages.iter().enumerate() {
+                         let index = message_index;
++                        if chat.is_group()
++                            && view
++                                .ignored_group_senders
++                                .iter()
++                                .any(|sender| sender == &message.sender)
++                        {
++                            previous = Some(message);
++                            continue;
++                        }
+                         // WhatsApp marks every item in a media album with the
+                         // same parent id. Only its first item owns a row; the
+                         // remaining consecutive items are painted in that row.
+@@ -5598,6 +5720,27 @@ fn bubble_frame(
+         .show(ui, |ui| {
+             ui.set_max_width(max_width);
+             ui.spacing_mut().item_spacing.y = 4.0;
++            let recovered = album.map_or_else(
++                || {
++                    view.recovered_messages
++                        .contains(&(message.chat.clone(), message.id.clone()))
++                },
++                |messages| {
++                    messages.iter().any(|message| {
++                        view.recovered_messages
++                            .contains(&(message.chat.clone(), message.id.clone()))
++                    })
++                },
++            );
++            if recovered {
++                ui.horizontal(|ui| {
++                    widgets::chip(
++                        ui,
++                        &palette,
++                        &crate::i18n::gettext(view.locale, "This message was deleted"),
++                    );
++                });
++            }
+             if show_sender && view.chat.is_group() {
+                 let name = (view.names_or)(&message.sender, message.sender_name.as_deref());
+                 let response = widgets::rich_text(
+@@ -6694,7 +6837,14 @@ fn status_opens_info(
+     if !has_message_info(message) {
+         return;
+     }
+-    let label = crate::i18n::gettext(view.locale, "Message info");
++    let label = crate::i18n::gettext(
++        view.locale,
++        if message.status == Delivery::Played {
++            "Played · Message info"
++        } else {
++            "Message info"
++        },
++    );
+     let response = ui.interact(
+         status.expand(2.0),
+         ui.id().with(("status", &message.id)),
+@@ -7109,6 +7259,13 @@ pub(crate) fn list_menu(
+         keyboard_navigation: &keyboard_navigation,
+         names_or: &names_or,
+         mention_names: &mention_names,
++        ignored_group_senders: app
++            .account()
++            .settings
++            .ignored_group_senders
++            .get(&chat.id)
++            .map_or(&[], Vec::as_slice),
++        recovered_messages: &app.account().recovered_messages,
+         avatars: &avatars,
+         contacts: &app.contacts,
+         now: crate::util::now(),
+@@ -7498,6 +7655,27 @@ fn context_menu(
+         }
+         widgets::menu_separator(ui, &palette);
+     }
++    if view.chat.is_group() && !message.from_me {
++        let ignored = view
++            .ignored_group_senders
++            .iter()
++            .any(|sender| sender == &message.sender);
++        let label = if ignored {
++            crate::i18n::gettext(view.locale, "Stop ignoring in this group")
++        } else {
++            crate::i18n::gettext(view.locale, "Ignore in this group")
++        };
++        let ignore = widgets::menu_item_response(ui, &palette, Some(Icon::EyeOff), &label, true);
++        first.get_or_insert(ignore.id);
++        if ignore.clicked() {
++            actions.push(Action::SetGroupSenderIgnored {
++                chat: chat.clone(),
++                sender: message.sender.clone(),
++                ignored: !ignored,
++            });
++            ui.close();
++        }
++    }
+     if let Some(text) = copyable_text(&message.content)
+         && widgets::menu_item(
+             ui,
+@@ -12830,6 +13008,8 @@ mod tests {
+             keyboard_navigation: &keyboard_navigation,
+             names_or: &names_or,
+             mention_names: &mention_names,
++            ignored_group_senders: &[],
++            recovered_messages: &app.account().recovered_messages,
+             avatars: &avatars,
+             contacts: &app.contacts,
+             now: 0,
+diff --git a/src/ui/focus.rs b/src/ui/focus.rs
+index fa10a78..29a68a3 100644
+--- a/src/ui/focus.rs
++++ b/src/ui/focus.rs
+@@ -10,6 +10,7 @@ pub enum Stop {
+     ViewOnce,
+     Send,
+     Attach,
++    AiDraft,
+     Emoji,
+     /// Staged-file review: the file strip and its controls.
+     ReviewFile(usize),
+diff --git a/src/ui/info.rs b/src/ui/info.rs
+index 2c2813f..40ca989 100644
+--- a/src/ui/info.rs
++++ b/src/ui/info.rs
+@@ -698,6 +698,10 @@ fn identity(app: &mut App, ui: &mut egui::Ui, shown: &Shown, overlay: bool) {
+     ui.add_space(4.0);
+     actions(app, ui, shown, mine, editable);
+     ui.vertical_centered(|ui| super::blocking::button(app, ui, id, Stop::InfoControl(BLOCK_STOP)));
++    if !shown.group && !shown.channel && !mine && shown.has_chat {
++        ui.add_space(8.0);
++        ai_reply_settings(app, ui, id);
++    }
+     let describing = app.group_description_edit.take().filter(|_| group_editable);
+     if let Some(mut draft) = describing {
+         ui.add_space(8.0);
+@@ -718,7 +722,32 @@ fn identity(app: &mut App, ui: &mut egui::Ui, shown: &Shown, overlay: bool) {
+         }
+     } else if let Some(description) = shown.description.as_deref() {
+         ui.add_space(8.0);
++        let description_id = egui::Id::new(("group-description-expanded", id));
++        let mut expanded = ui
++            .ctx()
++            .data(|data| data.get_temp::<bool>(description_id))
++            .unwrap_or(false);
+         ui.horizontal(|ui| {
++            let toggle_label = if expanded {
++                crate::i18n::gettext(app.locale, "Hide description")
++            } else {
++                crate::i18n::gettext(app.locale, "Show description")
++            };
++            let toggle = theme::icon_button(
++                ui,
++                if expanded {
++                    Icon::ChevronDown
++                } else {
++                    Icon::ChevronRight
++                },
++                16.0,
++                palette.secondary,
++                palette.text,
++                &toggle_label,
++            );
++            if toggle.clicked() {
++                expanded = !expanded;
++            }
+             theme::text(
+                 ui,
+                 crate::i18n::gettext(app.locale, "Description"),
+@@ -740,22 +769,18 @@ fn identity(app: &mut App, ui: &mut egui::Ui, shown: &Shown, overlay: bool) {
+                     .push(Action::EditGroupDescription(description.to_owned()));
+             }
+         });
+-        ui.add_space(4.0);
+-        // A long description scrolls in place, so the media and the members
+-        // stay close under it.
+-        egui::ScrollArea::vertical()
+-            .id_salt("group-description")
+-            .max_height(120.0)
+-            .auto_shrink([false, true])
+-            .show(ui, |ui| {
+-                theme::selectable_text(ui, description, theme::regular(13.5), palette.text);
+-            });
+-    }
+-    // A locked chat's media stays in the locked folder: the section is not
+-    // there, rather than empty.
+-    if app.info_media_allowed() {
+-        ui.add_space(8.0);
+-        media_row(app, ui, id, overlay);
++        ui.ctx()
++            .data_mut(|data| data.insert_temp(description_id, expanded));
++        if expanded {
++            ui.add_space(4.0);
++            egui::ScrollArea::vertical()
++                .id_salt(("group-description", id))
++                .max_height(120.0)
++                .auto_shrink([false, true])
++                .show(ui, |ui| {
++                    theme::selectable_text(ui, description, theme::regular(13.5), palette.text);
++                });
++        }
+     }
+     // Our own details, under either of our ids, share no groups with us.
+     if !shown.group && !shown.channel && !app.our_ids().contains(&id) {
+@@ -765,8 +790,12 @@ fn identity(app: &mut App, ui: &mut egui::Ui, shown: &Shown, overlay: bool) {
+             common_groups(app, ui, id, &groups);
+         }
+     }
+-    if shown.can_manage {
++    if shown.group && shown.members > 0 {
+         ui.add_space(4.0);
++        members(app, ui, shown, window);
++    }
++    if shown.can_manage {
++        ui.add_space(8.0);
+         let label = crate::i18n::gettext(app.locale, "Group permissions");
+         let response = nav_row(app, ui, Icon::Shield, &label, PERMISSIONS_STOP);
+         ui.ctx()
+@@ -775,9 +804,12 @@ fn identity(app: &mut App, ui: &mut egui::Ui, shown: &Shown, overlay: bool) {
+             app.actions.push(Action::ShowInfo(InfoView::Permissions));
+         }
+     }
+-    if shown.group && shown.members > 0 {
++    // A locked chat's media stays in the locked folder: the section is not
++    // there, rather than empty. Members come first so the list is easier to
++    // reach without scrolling past the media shelf.
++    if app.info_media_allowed() {
+         ui.add_space(8.0);
+-        members(app, ui, shown, window, photo);
++        media_row(app, ui, id, overlay);
+     }
+     if shown.can_leave {
+         ui.add_space(8.0);
+@@ -801,6 +833,65 @@ fn identity(app: &mut App, ui: &mut egui::Ui, shown: &Shown, overlay: bool) {
+     }
+ }
+ 
++fn ai_reply_settings(app: &mut App, ui: &mut egui::Ui, chat: &str) {
++    let palette = app.palette;
++    let locale = app.locale;
++    let preference = app
++        .account()
++        .settings
++        .ai_chats
++        .get(chat)
++        .cloned()
++        .unwrap_or_default();
++    let mut enabled = preference.enabled;
++    let mut changed = false;
++    widgets::setting_row(
++        ui,
++        &palette,
++        &crate::i18n::gettext(locale, "Draft replies with AI"),
++        &crate::i18n::gettext(
++            locale,
++            "Only this contact. Uses the context configured in AI settings when requested. Nothing is sent automatically.",
++        ),
++        |ui| {
++            let response = widgets::switch(ui, &palette, &mut enabled);
++            theme::reveal_focus(&response);
++            changed = response.changed();
++        },
++    );
++    if changed {
++        app.actions.push(Action::SetAiChatEnabled {
++            chat: chat.to_owned(),
++            enabled,
++        });
++    }
++    if enabled {
++        ui.add_space(4.0);
++        let style_id = egui::Id::new(("local-ai-style", chat));
++        let mut style = ui
++            .ctx()
++            .data(|data| data.get_temp::<String>(style_id))
++            .unwrap_or_else(|| preference.style.clone());
++        let response = ui.add(
++            egui::TextEdit::multiline(&mut style)
++                .desired_rows(2)
++                .desired_width(ui.available_width())
++                .font(theme::regular(13.0))
++                .text_color(palette.text)
++                .hint_text(crate::i18n::gettext(locale, "How should the AI sound?")),
++        );
++        ui.ctx()
++            .data_mut(|data| data.insert_temp(style_id, style.clone()));
++        if response.lost_focus() && style != preference.style {
++            ui.ctx().data_mut(|data| data.remove::<String>(style_id));
++            app.actions.push(Action::SetAiChatStyle {
++                chat: chat.to_owned(),
++                style,
++            });
++        }
++    }
++}
++
+ /// The actions the chat offers, as many per row as fit, centred.
+ fn actions(app: &mut App, ui: &mut egui::Ui, shown: &Shown, mine: bool, editable: bool) {
+     let palette = app.palette;
+@@ -920,7 +1011,7 @@ fn actions(app: &mut App, ui: &mut egui::Ui, shown: &Shown, mine: bool, editable
+ 
+ /// The group's members, each opening their own panel. They are sorted once
+ /// per change of the chat list or the contacts, not every frame.
+-fn members(app: &mut App, ui: &mut egui::Ui, shown: &Shown, window: f32, photo: f32) {
++fn members(app: &mut App, ui: &mut egui::Ui, shown: &Shown, window: f32) {
+     let palette = app.palette;
+     let id = shown.id.as_str();
+     if app.info_members.as_ref().is_none_or(|(chat, _)| chat != id) {
+@@ -936,11 +1027,27 @@ fn members(app: &mut App, ui: &mut egui::Ui, shown: &Shown, window: f32, photo:
+     };
+     theme::text(
+         ui,
+-        format!("Members ({})", members.len()),
++        format!(
++            "{} ({})",
++            crate::i18n::gettext(app.locale, "Members"),
++            members.len()
++        ),
+         theme::medium(12.5),
+         palette.secondary,
+     );
+     ui.add_space(4.0);
++    let search_id = egui::Id::new(("group-members-search", id));
++    let mut query = ui
++        .ctx()
++        .data(|data| data.get_temp::<String>(search_id))
++        .unwrap_or_default();
++    let hint = crate::i18n::gettext(app.locale, "Search members");
++    let search_width = ui.available_width();
++    widgets::search_field(ui, &palette, search_id, &mut query, &hint, search_width);
++    ui.ctx()
++        .data_mut(|data| data.insert_temp(search_id, query.clone()));
++    let matching = matching_members(&members, &query);
++    ui.add_space(4.0);
+     if shown.can_add {
+         let label = crate::i18n::gettext(app.locale, "Add members");
+         let response = nav_row(app, ui, Icon::UserPlus, &label, ADD_MEMBERS_STOP);
+@@ -963,149 +1070,189 @@ fn members(app: &mut App, ui: &mut egui::Ui, shown: &Shown, window: f32, photo:
+     let ours: Vec<&str> = ours.iter().map(String::as_str).collect();
+     let locale = app.locale;
+     let mut chosen: Option<(String, crate::group_admin::MemberChange)> = None;
+-    // Limit the visible rows because groups can have thousands of members.
+-    let row_height = 30.0;
+-    let rows = ((window - photo - 300.0) / row_height)
+-        .floor()
+-        .clamp(2.0, 8.0);
++    let mut ignored_sender: Option<(String, bool)> = None;
++    // Keep the inner list roomy enough to scan, while letting the outer
++    // information panel scroll naturally on shorter windows.
++    let row_height = 32.0;
++    let max_height = (window * 0.42).clamp(row_height * 5.0, row_height * 12.0);
+     let mut open = None;
+     // `show_rows` reads the spacing from outside its closure.
+     ui.spacing_mut().item_spacing.y = 0.0;
+-    egui::ScrollArea::vertical()
+-        .id_salt(("members", id))
+-        .max_height(row_height * rows)
+-        .auto_shrink([false, true])
+-        .show_rows(ui, row_height, members.len(), |ui, range| {
+-            for (member, name) in &members[range] {
+-                let (rect, response) = ui.allocate_exact_size(
+-                    egui::vec2(ui.available_width(), row_height),
+-                    egui::Sense::click(),
+-                );
+-                response.widget_info(|| {
+-                    egui::WidgetInfo::labeled(egui::WidgetType::Button, true, name)
+-                });
+-                let admin = roles.is_admin(member);
+-                let changes = roles.changes(member, &ours);
+-                // The menu's button sits at the row's end, over the row.
+-                let more = (!changes.is_empty()).then(|| {
+-                    let spot = Rect::from_center_size(
+-                        pos2(rect.right() - 14.0, rect.center().y),
+-                        Vec2::splat(24.0),
++    if matching.is_empty() {
++        theme::text(
++            ui,
++            crate::i18n::gettext(locale, "No members match that search."),
++            theme::regular(12.5),
++            palette.secondary,
++        );
++    } else {
++        egui::ScrollArea::vertical()
++            .id_salt(("members", id))
++            .max_height(max_height)
++            .auto_shrink([false, true])
++            .show_rows(ui, row_height, matching.len(), |ui, range| {
++                for (member, name) in &matching[range] {
++                    let (rect, response) = ui.allocate_exact_size(
++                        egui::vec2(ui.available_width(), row_height),
++                        egui::Sense::click(),
+                     );
+-                    let more = ui
+-                        .interact(spot, ui.id().with(("member-menu", member)), Sense::click())
+-                        .on_hover_cursor(egui::CursorIcon::PointingHand);
+-                    let label =
+-                        crate::i18n::gettext(locale, "Options for {name}").replace("{name}", name);
+-                    more.widget_info(|| {
+-                        egui::WidgetInfo::labeled(egui::WidgetType::Button, true, &label)
++                    response.widget_info(|| {
++                        egui::WidgetInfo::labeled(egui::WidgetType::Button, true, name)
+                     });
+-                    #[cfg(any(test, feature = "demo"))]
+-                    {
+-                        ui.ctx()
+-                            .data_mut(|data| data.insert_temp(member_menu_id(member), spot));
+-                        if app.open_member_menu.as_deref() == Some(member.as_str()) {
+-                            egui::Popup::open_id(ui.ctx(), more.id.with("popup"));
++                    let admin = roles.is_admin(member);
++                    let changes = roles.changes(member, &ours);
++                    let can_ignore =
++                        app.info_media_allowed() && can_ignore_group_member(member, &ours);
++                    let ignored = app.ignored_group_sender(id, member);
++                    // Every other member has a local, per-group ignore action.
++                    // Admin actions remain available in the same menu.
++                    let more = (!changes.is_empty() || can_ignore).then(|| {
++                        let spot = Rect::from_center_size(
++                            pos2(rect.right() - 14.0, rect.center().y),
++                            Vec2::splat(24.0),
++                        );
++                        let more = ui
++                            .interact(spot, ui.id().with(("member-menu", member)), Sense::click())
++                            .on_hover_cursor(egui::CursorIcon::PointingHand);
++                        let label = crate::i18n::gettext(locale, "Options for {name}")
++                            .replace("{name}", name);
++                        more.widget_info(|| {
++                            egui::WidgetInfo::labeled(egui::WidgetType::Button, true, &label)
++                        });
++                        #[cfg(any(test, feature = "demo"))]
++                        {
++                            ui.ctx()
++                                .data_mut(|data| data.insert_temp(member_menu_id(member), spot));
++                            if app.open_member_menu.as_deref() == Some(member.as_str()) {
++                                egui::Popup::open_id(ui.ctx(), more.id.with("popup"));
++                            }
+                         }
+-                    }
+-                    more
+-                });
+-                if ui.is_rect_visible(rect) {
+-                    if response.hovered() {
+-                        ui.painter().rect_filled(rect, 6.0, palette.surface_hover);
+-                    }
+-                    let picture = app.avatar(member);
+-                    let avatar = egui::Rect::from_center_size(
+-                        egui::pos2(rect.left() + 16.0, rect.center().y),
+-                        egui::Vec2::splat(24.0),
+-                    );
+-                    widgets::paint_avatar(
+-                        ui,
+-                        &palette,
+-                        avatar,
+-                        name.trim_start_matches('~'),
+-                        member,
+-                        picture.as_deref(),
+-                    );
+-                    // The end of the row: the admin tag and the menu button.
+-                    let mut end = rect.right() - 4.0;
+-                    if let Some(more) = &more {
+-                        let color = if more.hovered() {
+-                            palette.text
+-                        } else {
+-                            palette.secondary
+-                        };
+-                        if more.hovered() {
+-                            ui.painter().circle_filled(
+-                                more.rect.center(),
+-                                12.0,
+-                                palette.surface_active,
++                        more
++                    });
++                    if ui.is_rect_visible(rect) {
++                        if response.hovered() {
++                            ui.painter().rect_filled(rect, 6.0, palette.surface_hover);
++                        }
++                        let picture = app.avatar(member);
++                        let avatar = egui::Rect::from_center_size(
++                            egui::pos2(rect.left() + 16.0, rect.center().y),
++                            egui::Vec2::splat(24.0),
++                        );
++                        widgets::paint_avatar(
++                            ui,
++                            &palette,
++                            avatar,
++                            name.trim_start_matches('~'),
++                            member,
++                            picture.as_deref(),
++                        );
++                        // The end of the row: the admin tag and the menu button.
++                        let mut end = rect.right() - 4.0;
++                        if let Some(more) = &more {
++                            let color = if more.hovered() {
++                                palette.text
++                            } else {
++                                palette.secondary
++                            };
++                            if more.hovered() {
++                                ui.painter().circle_filled(
++                                    more.rect.center(),
++                                    12.0,
++                                    palette.surface_active,
++                                );
++                            }
++                            theme::paint_icon(ui, Icon::Ellipsis, more.rect, 16.0, color);
++                            end = more.rect.left() - 4.0;
++                        }
++                        if admin {
++                            let tag = widgets::line(
++                                ui,
++                                &crate::i18n::gettext(locale, "Group admin"),
++                                theme::regular(11.5),
++                                palette.accent,
++                                90.0,
++                                1,
++                            );
++                            let pill = Rect::from_min_size(
++                                pos2(
++                                    end - tag.size().x - 12.0,
++                                    rect.center().y - tag.size().y / 2.0 - 2.0,
++                                ),
++                                tag.size() + vec2(12.0, 4.0),
++                            );
++                            ui.painter().rect_filled(
++                                pill,
++                                6.0,
++                                palette.accent.gamma_multiply(0.14),
+                             );
++                            tag.paint(ui, pill.min + vec2(6.0, 2.0), palette.accent);
++                            end = pill.left() - 6.0;
+                         }
+-                        theme::paint_icon(ui, Icon::Ellipsis, more.rect, 16.0, color);
+-                        end = more.rect.left() - 4.0;
+-                    }
+-                    if admin {
+-                        let tag = widgets::line(
++                        let line = widgets::line(
+                             ui,
+-                            &crate::i18n::gettext(locale, "Group admin"),
+-                            theme::regular(11.5),
+-                            palette.accent,
+-                            90.0,
++                            name,
++                            theme::regular(13.0),
++                            palette.text,
++                            (end - rect.left() - 34.0).max(20.0),
+                             1,
+                         );
+-                        let pill = Rect::from_min_size(
+-                            pos2(
+-                                end - tag.size().x - 12.0,
+-                                rect.center().y - tag.size().y / 2.0 - 2.0,
+-                            ),
+-                            tag.size() + vec2(12.0, 4.0),
++                        line.paint(
++                            ui,
++                            egui::pos2(rect.left() + 34.0, rect.center().y - line.size().y / 2.0),
++                            palette.text,
+                         );
+-                        ui.painter()
+-                            .rect_filled(pill, 6.0, palette.accent.gamma_multiply(0.14));
+-                        tag.paint(ui, pill.min + vec2(6.0, 2.0), palette.accent);
+-                        end = pill.left() - 6.0;
+                     }
+-                    let line = widgets::line(
+-                        ui,
+-                        name,
+-                        theme::regular(13.0),
+-                        palette.text,
+-                        (end - rect.left() - 34.0).max(20.0),
+-                        1,
+-                    );
+-                    line.paint(
+-                        ui,
+-                        egui::pos2(rect.left() + 34.0, rect.center().y - line.size().y / 2.0),
+-                        palette.text,
+-                    );
+-                }
+-                // The menu opens from its button or a right-click on the row.
+-                if let Some(more) = &more {
+-                    let width = member_menu_width(ui, locale, &changes);
+-                    for popup in [
+-                        egui::Popup::menu(more),
+-                        egui::Popup::context_menu(&response),
+-                    ] {
+-                        popup
+-                            .width(width)
+-                            .frame(widgets::menu_frame(&palette))
+-                            .show(|ui| {
+-                                if let Some(change) = member_menu(ui, &palette, locale, &changes) {
+-                                    chosen = Some((member.clone(), change));
+-                                    ui.close();
+-                                }
+-                            });
++                    // The menu opens from its button or a right-click on the row.
++                    if let Some(more) = &more {
++                        let ignore_label = if ignored {
++                            crate::i18n::gettext(locale, "Stop ignoring in this group")
++                        } else {
++                            crate::i18n::gettext(locale, "Ignore in this group")
++                        };
++                        let ignore_width = widgets::menu_width(ui, &[ignore_label.as_ref()], true);
++                        let width = member_menu_width(ui, locale, &changes).max(ignore_width);
++                        for popup in [
++                            egui::Popup::menu(more),
++                            egui::Popup::context_menu(&response),
++                        ] {
++                            popup
++                                .width(width)
++                                .frame(widgets::menu_frame(&palette))
++                                .show(|ui| {
++                                    if let Some(change) =
++                                        member_menu(ui, &palette, locale, &changes)
++                                    {
++                                        chosen = Some((member.clone(), change));
++                                        ui.close();
++                                    }
++                                    if can_ignore {
++                                        if !changes.is_empty() {
++                                            widgets::menu_separator(ui, &palette);
++                                        }
++                                        if widgets::menu_item(
++                                            ui,
++                                            &palette,
++                                            Some(Icon::EyeOff),
++                                            &ignore_label,
++                                        ) {
++                                            ignored_sender = Some((member.clone(), !ignored));
++                                            ui.close();
++                                        }
++                                    }
++                                });
++                        }
++                    }
++                    let menu_clicked = more.as_ref().is_some_and(|response| response.clicked());
++                    if response
++                        .on_hover_cursor(egui::CursorIcon::PointingHand)
++                        .clicked()
++                        && !menu_clicked
++                    {
++                        open = Some(member.clone());
+                     }
+                 }
+-                if response
+-                    .on_hover_cursor(egui::CursorIcon::PointingHand)
+-                    .clicked()
+-                {
+-                    open = Some(member.clone());
+-                }
+-            }
+-        });
++            });
++    }
+     app.info_members = Some((id.to_owned(), members));
+     if let Some((member, change)) = chosen {
+         app.actions.push(match change {
+@@ -1122,6 +1269,13 @@ fn members(app: &mut App, ui: &mut egui::Ui, shown: &Shown, window: f32, photo:
+             },
+         });
+     }
++    if let Some((sender, ignored)) = ignored_sender {
++        app.actions.push(Action::SetGroupSenderIgnored {
++            chat: id.to_owned(),
++            sender,
++            ignored,
++        });
++    }
+     if let Some(member) = open
+         && Some(member.as_str()) != app.me.as_deref()
+     {
+@@ -1129,6 +1283,18 @@ fn members(app: &mut App, ui: &mut egui::Ui, shown: &Shown, window: f32, photo:
+     }
+ }
+ 
++fn matching_members(members: &[(String, String)], query: &str) -> Vec<(String, String)> {
++    let needle = crate::util::search_key(query.trim());
++    members
++        .iter()
++        .filter(|(member, name)| {
++            needle.is_empty()
++                || crate::util::search_key(&format!("{name} {member}")).contains(&needle)
++        })
++        .cloned()
++        .collect()
++}
++
+ /// The groups `person` shares with us, by name, as `(id, name)`: those whose
+ /// member list includes them and us. Groups we left are not shared any more,
+ /// and a locked group stays in the locked folder rather than showing here.
+@@ -1987,6 +2153,10 @@ fn member_menu_item(
+     }
+ }
+ 
++fn can_ignore_group_member(member: &str, ours: &[&str]) -> bool {
++    !ours.contains(&member)
++}
++
+ fn member_menu_width(
+     ui: &egui::Ui,
+     locale: crate::i18n::Locale,
+@@ -2397,6 +2567,32 @@ mod tests {
+         assert!(chat.is_empty() && message.is_empty() && card.is_none());
+     }
+ 
++    #[test]
++    fn the_group_member_options_include_ignore_but_not_our_own_row() {
++        let ours = ["15550001111@s.whatsapp.net"];
++        assert!(super::can_ignore_group_member("1@s.whatsapp.net", &ours));
++        assert!(!super::can_ignore_group_member(ours[0], &ours));
++    }
++
++    #[test]
++    fn member_search_matches_names_and_numbers_without_case_or_diacritic_sensitivity() {
++        let members = vec![
++            ("1@s.whatsapp.net".to_owned(), "~França Piscinas".to_owned()),
++            (
++                "15550002222@s.whatsapp.net".to_owned(),
++                "Gleidy Clementino".to_owned(),
++            ),
++        ];
++        assert_eq!(
++            super::matching_members(&members, "franca"),
++            vec![members[0].clone()]
++        );
++        assert_eq!(
++            super::matching_members(&members, "2222"),
++            vec![members[1].clone()]
++        );
++    }
++
+     use super::domain;
+ 
+     #[test]
+diff --git a/src/ui/message_info.rs b/src/ui/message_info.rs
+index cfb1aaf..04a087d 100644
+--- a/src/ui/message_info.rs
++++ b/src/ui/message_info.rs
+@@ -215,7 +215,17 @@ fn direct(app: &App, ui: &mut egui::Ui, message: &Message) {
+         ui.add_space(4.0);
+         ui.horizontal(|ui| {
+             let (rect, _) = ui.allocate_exact_size(vec2(18.0, 18.0), Sense::hover());
+-            theme::paint_icon(ui, Icon::DeliveryTicks, rect, 18.0, color);
++            theme::paint_icon(
++                ui,
++                if delivery == Delivery::Played {
++                    Icon::Volume2
++                } else {
++                    Icon::DeliveryTicks
++                },
++                rect,
++                18.0,
++                color,
++            );
+             ui.vertical(|ui| {
+                 ui.spacing_mut().item_spacing.y = 2.0;
+                 theme::text(ui, label, theme::medium(14.0), palette.text);
+diff --git a/src/ui/pane.rs b/src/ui/pane.rs
+index 426c86d..10fc721 100644
+--- a/src/ui/pane.rs
++++ b/src/ui/pane.rs
+@@ -322,7 +322,21 @@ fn search(app: &mut App, ui: &mut egui::Ui, overlay: bool) {
+         return;
+     }
+     // Taken for the frame rather than cloned: the rows only push actions.
+-    let hits = std::mem::take(&mut app.chat_search_hits);
++    let ignored: std::collections::HashSet<(String, String)> = app
++        .account()
++        .settings
++        .ignored_group_senders
++        .iter()
++        .flat_map(|(chat, senders)| {
++            senders
++                .iter()
++                .map(move |sender| (chat.clone(), sender.clone()))
++        })
++        .collect();
++    let hits: Vec<_> = std::mem::take(&mut app.chat_search_hits)
++        .into_iter()
++        .filter(|message| !ignored.contains(&(message.chat.clone(), message.sender.clone())))
++        .collect();
+     let query = app.chat_search.trim().to_owned();
+     egui::ScrollArea::vertical()
+         .id_salt("chat-search-hits")
+diff --git a/src/ui/settings.rs b/src/ui/settings.rs
+index 28987dc..52bfea2 100644
+--- a/src/ui/settings.rs
++++ b/src/ui/settings.rs
+@@ -3,6 +3,7 @@
+ use std::borrow::Cow;
+ 
+ use egui::{Align, CornerRadius, Frame, Layout, Margin, Rect, Sense, Stroke, Vec2, pos2, vec2};
++use zeroize::Zeroize;
+ 
+ use crate::app::App;
+ use crate::i18n::Locale;
+@@ -101,7 +102,10 @@ enum Control {
+     /// A switch bound to a setting.
+     Toggle(fn(&mut Settings) -> &mut bool),
+     /// A switch bound to the active WhatsApp account.
+-    AccountToggle(fn(&mut crate::settings::AccountSettings) -> &mut bool),
++    AccountToggle {
++        field: fn(&mut crate::settings::AccountSettings) -> &mut bool,
++        sync_keep_deleted_messages: bool,
++    },
+     /// Something that lays itself out, like the account card.
+     Block(Draw),
+ }
+@@ -159,7 +163,28 @@ impl Section {
+             description: description.into(),
+             keywords: Vec::new(),
+         };
+-        self.entries.push((row, Control::AccountToggle(field)));
++        self.entries.push((
++            row,
++            Control::AccountToggle {
++                field,
++                sync_keep_deleted_messages: false,
++            },
++        ));
++    }
++
++    fn keep_deleted_toggle(&mut self, title: impl Into<Text>, description: impl Into<Text>) {
++        let row = Row {
++            title: title.into(),
++            description: description.into(),
++            keywords: Vec::new(),
++        };
++        self.entries.push((
++            row,
++            Control::AccountToggle {
++                field: |settings| &mut settings.keep_deleted_messages,
++                sync_keep_deleted_messages: true,
++            },
++        ));
+     }
+ 
+     fn block(&mut self, keywords: Vec<Text>, draw: impl FnOnce(&mut egui::Ui, &mut App) + 'static) {
+@@ -200,8 +225,18 @@ impl Section {
+                     Control::Toggle(field) => {
+                         toggle(ui, app, &row.title.shown, &row.description.shown, field);
+                     }
+-                    Control::AccountToggle(field) => {
+-                        account_toggle(ui, app, &row.title.shown, &row.description.shown, field);
++                    Control::AccountToggle {
++                        field,
++                        sync_keep_deleted_messages,
++                    } => {
++                        account_toggle(
++                            ui,
++                            app,
++                            &row.title.shown,
++                            &row.description.shown,
++                            field,
++                            sync_keep_deleted_messages,
++                        );
+                     }
+                     Control::Block(draw) => draw(ui, app),
+                 }
+@@ -513,6 +548,48 @@ fn sections(app: &App) -> Vec<Section> {
+             ui.data_mut(|data| data.insert_temp(code_id, code));
+         },
+     );
++    let ignored: Vec<_> = app
++        .account()
++        .settings
++        .ignored_group_senders
++        .iter()
++        .flat_map(|(chat, senders)| {
++            let group = app
++                .chats
++                .iter()
++                .find(|row| row.id == *chat)
++                .map(|row| app.chat_title(row))
++                .unwrap_or_else(|| chat.clone());
++            senders.iter().map(move |sender| {
++                let name = app.display_name_or(sender, None);
++                (chat.clone(), sender.clone(), group.clone(), name)
++            })
++        })
++        .collect();
++    for (chat, sender, group, name) in ignored {
++        let title = format!("{name} · {group}");
++        chats.row(
++            title,
++            translated(locale, "Ignored in this group."),
++            move |ui, app| {
++                if theme::soft_button(
++                    ui,
++                    &app.palette,
++                    None,
++                    &crate::i18n::gettext(app.locale, "Unignore"),
++                    false,
++                )
++                .clicked()
++                {
++                    app.actions.push(Action::SetGroupSenderIgnored {
++                        chat: chat.clone(),
++                        sender: sender.clone(),
++                        ignored: false,
++                    });
++                }
++            },
++        );
++    }
+ 
+     let mut notifications = Section::new(translated(locale, "Notifications"));
+     notifications.account_toggle(
+@@ -523,6 +600,11 @@ fn sections(app: &App) -> Vec<Section> {
+         ),
+         |settings| &mut settings.notifications,
+     );
++    notifications.account_toggle(
++        translated(locale, "Channel notifications"),
++        translated(locale, "Show desktop notifications for WhatsApp Channels."),
++        |settings| &mut settings.channel_notifications,
++    );
+     if app.account().settings.notifications {
+         let (title, description) = sound_text(locale, false);
+         notifications.toggle(
+@@ -583,6 +665,21 @@ fn sections(app: &App) -> Vec<Section> {
+         receipts_note,
+         |settings| &mut settings.send_read_receipts,
+     );
++    privacy.account_toggle(
++        translated(locale, "Defer read receipts until you send a message"),
++        translated(
++            locale,
++            "Read state stays local. Receipts are sent after your message is sent in that chat.",
++        ),
++        |settings| &mut settings.defer_read_receipts_until_send,
++    );
++    privacy.keep_deleted_toggle(
++        translated(locale, "Keep messages deleted by others"),
++        translated(
++            locale,
++            "Keep the local copy of incoming messages after the sender deletes them.",
++        ),
++    );
+     privacy.account_toggle(
+         translated(locale, "Show when you are typing"),
+         "",
+@@ -665,6 +762,310 @@ fn sections(app: &App) -> Vec<Section> {
+         });
+     }
+ 
++    let mut ai = Section::new(translated(locale, "AI drafts"));
++    ai.block(
++        vec![
++            translated(locale, "AI provider"),
++            translated(locale, "Privacy"),
++            translated(locale, "Conversation history"),
++        ],
++        move |ui, app| {
++            theme::paragraph(
++                ui,
++                crate::i18n::gettext(
++                    app.locale,
++                    "When you request a draft, hosted providers receive the context selected below. Review the provider's privacy policy before using one. Nothing is sent automatically.",
++                ),
++                theme::regular(12.5),
++                app.palette.secondary,
++            );
++            ui.add_space(6.0);
++        },
++    );
++    ai.row(
++        translated(locale, "AI provider"),
++        translated(locale, "Choose where requested drafts are generated."),
++        |ui, app| {
++            let selected = app.settings.ai_provider;
++            let response = egui::ComboBox::from_id_salt("ai-provider")
++                .selected_text(selected.label(app.locale))
++                .width(ui.available_width())
++                .show_ui(ui, |ui| {
++                    for provider in crate::ai::AiProvider::ALL {
++                        if theme_option(
++                            ui,
++                            &app.palette,
++                            &provider.label(app.locale),
++                            provider == selected,
++                        ) {
++                            app.settings.ai_provider = provider;
++                            app.settings.ai_model.clear();
++                            app.ai_models.clear();
++                            app.ai_models_provider = None;
++                            app.ai_key_saved = None;
++                            app.actions.push(Action::SettingsChanged);
++                        }
++                    }
++                });
++            theme::reveal_focus(&response.response);
++        },
++    );
++    ai.row(
++        translated(locale, "Conversation context"),
++        translated(
++            locale,
++            "Number of recent messages to include, counting the message being answered. All uses locally archived messages.",
++        ),
++        |ui, app| {
++            let mut use_all = app.settings.ai_context_messages.is_none();
++            let mut count = app.settings.ai_context_messages.unwrap_or(1).max(1);
++            ui.horizontal(|ui| {
++                if !use_all {
++                    let response =
++                        ui.add(egui::DragValue::new(&mut count).range(1..=100_000).speed(1));
++                    theme::reveal_focus(&response);
++                    if response.changed() {
++                        app.actions.push(Action::SetAiContextMessages(Some(count)));
++                    }
++                }
++                let response = ui.checkbox(
++                    &mut use_all,
++                    crate::i18n::gettext(app.locale, "All messages"),
++                );
++                theme::reveal_focus(&response);
++                if response.changed() {
++                    app.actions.push(Action::SetAiContextMessages(if use_all {
++                        None
++                    } else {
++                        Some(1)
++                    }));
++                }
++            });
++        },
++    );
++    if app.settings.ai_provider.is_local() {
++        ai.row(
++            translated(locale, "Local model endpoint"),
++            translated(
++                locale,
++                "Only loopback servers are allowed. Ollama and LM Studio support this API.",
++            ),
++            |ui, app| {
++                let response = ui.add(
++                    egui::TextEdit::singleline(&mut app.settings.ai_endpoint)
++                        .font(theme::regular(13.0))
++                        .text_color(app.palette.text)
++                        .desired_width(ui.available_width())
++                        .hint_text("http://localhost:11434/v1"),
++                );
++                if response.changed() {
++                    app.ai_models.clear();
++                    app.ai_models_pending = None;
++                    app.ai_models_provider = None;
++                    app.actions.push(Action::SettingsChanged);
++                }
++            },
++        );
++    }
++    ai.row(
++        translated(locale, "Model"),
++        translated(locale, "Choose a model reported by the selected provider."),
++        |ui, app| {
++            if app.ai_models.is_empty() {
++                let response = ui.add(
++                    egui::TextEdit::singleline(&mut app.settings.ai_model)
++                        .font(theme::regular(13.0))
++                        .text_color(app.palette.text)
++                        .desired_width(ui.available_width())
++                        .hint_text(crate::i18n::gettext(app.locale, "Model identifier")),
++                );
++                if response.changed() {
++                    app.actions.push(Action::SettingsChanged);
++                }
++            } else {
++                let selected = app.settings.ai_model.clone();
++                let response = egui::ComboBox::from_id_salt("local-ai-model")
++                    .selected_text(if selected.is_empty() {
++                        crate::i18n::gettext(app.locale, "Choose a model").into_owned()
++                    } else {
++                        selected.clone()
++                    })
++                    .width(ui.available_width())
++                    .show_ui(ui, |ui| {
++                        for model in &app.ai_models {
++                            if theme_option(ui, &app.palette, model, model == &selected) {
++                                app.settings.ai_model.clone_from(model);
++                                app.actions.push(Action::SettingsChanged);
++                            }
++                        }
++                    });
++                theme::reveal_focus(&response.response);
++            }
++        },
++    );
++    ai.row(
++        translated(locale, "Provider API key"),
++        if app.settings.ai_provider.is_local() {
++            translated(
++                locale,
++                "Optional for local servers. Stored in your operating system's keyring.",
++            )
++        } else {
++            translated(
++                locale,
++                "Required for this provider. Stored in your operating system's keyring.",
++            )
++        },
++        |ui, app| {
++            let provider = app.settings.ai_provider;
++            let key_id = egui::Id::new(("ai-provider-key-draft", provider.keyring_id()));
++            let mut key: String = ui.data_mut(|data| data.get_temp(key_id).unwrap_or_default());
++            let width = (ui.available_width() - 66.0).max(80.0);
++            let response = ui.add(
++                egui::TextEdit::singleline(&mut key)
++                    .password(true)
++                    .font(theme::regular(13.0))
++                    .text_color(app.palette.text)
++                    .desired_width(width)
++                    .hint_text(crate::i18n::gettext(app.locale, "Enter provider API key")),
++            );
++            theme::reveal_focus(&response);
++            ui.data_mut(|data| data.insert_temp(key_id, key.clone()));
++            if theme::soft_button(
++                ui,
++                &app.palette,
++                None,
++                &crate::i18n::gettext(app.locale, "Save"),
++                false,
++            )
++            .clicked()
++            {
++                app.backend.send(crate::backend::Command::SetAiApiKey {
++                    provider,
++                    key: crate::ai::ApiKey::new(key.clone()),
++                });
++                app.ai_key_save_pending = Some(provider);
++                app.ai_key_saved = None;
++                key.zeroize();
++                ui.data_mut(|data| data.remove::<String>(key_id));
++            }
++            if app.ai_key_save_pending == Some(provider) {
++                theme::text(
++                    ui,
++                    crate::i18n::gettext(app.locale, "Saving key…"),
++                    theme::regular(11.5),
++                    app.palette.secondary,
++                );
++            } else if let Some((saved_provider, saved)) = app.ai_key_saved
++                && saved_provider == provider
++            {
++                let status = if saved {
++                    "Key saved in the OS keyring"
++                } else {
++                    "Key removed from the OS keyring"
++                };
++                theme::text(
++                    ui,
++                    crate::i18n::gettext(app.locale, status),
++                    theme::regular(11.5),
++                    app.palette.secondary,
++                );
++            }
++        },
++    );
++    ai.row(
++        translated(locale, "Available models"),
++        translated(
++            locale,
++            "Model names are fetched from the selected provider when you refresh.",
++        ),
++        |ui, app| {
++            if theme::soft_button(
++                ui,
++                &app.palette,
++                Some(Icon::Refresh),
++                &crate::i18n::gettext(app.locale, "Refresh models"),
++                false,
++            )
++            .clicked()
++            {
++                app.actions.push(Action::RefreshAiModels);
++            }
++            if app.ai_models_pending.is_some() {
++                theme::spinner(ui, 15.0, app.palette.secondary);
++            }
++        },
++    );
++    ai.block(
++        vec![
++            translated(locale, "Synthetic reply test"),
++            translated(locale, "Test selected model"),
++        ],
++        |ui, app| {
++            let palette = app.palette;
++            ui.set_width(ui.available_width());
++            theme::text(
++                ui,
++                crate::i18n::gettext(app.locale, "Synthetic reply test"),
++                theme::medium(13.0),
++                palette.text,
++            );
++            theme::paragraph(
++                ui,
++                crate::i18n::gettext(
++                    app.locale,
++                    "Uses only the sample text below, never a real conversation.",
++                ),
++                theme::regular(12.5),
++                palette.secondary,
++            );
++            ui.add_space(6.0);
++            ui.horizontal(|ui| {
++                let button_width = 164.0_f32.min(ui.available_width() * 0.45);
++                let field_width =
++                    (ui.available_width() - button_width - ui.spacing().item_spacing.x).max(120.0);
++                let response = ui.add(
++                    egui::TextEdit::singleline(&mut app.ai_simulator_message)
++                        .font(theme::regular(13.0))
++                        .text_color(palette.text)
++                        .desired_width(field_width)
++                        .hint_text(crate::i18n::gettext(app.locale, "Synthetic message")),
++                );
++                theme::reveal_focus(&response);
++                let pending = app.ai_simulator_pending();
++                let clicked = ui
++                    .add_enabled_ui(!pending, |ui| {
++                        theme::soft_button(
++                            ui,
++                            &palette,
++                            Some(Icon::MessageCircle),
++                            &crate::i18n::gettext(app.locale, "Test selected model"),
++                            false,
++                        )
++                    })
++                    .inner
++                    .clicked();
++                if clicked {
++                    app.actions.push(Action::TestAiSimulator);
++                }
++                if pending {
++                    theme::spinner(ui, 14.0, palette.secondary);
++                }
++            });
++            if let Some(reply) = &app.ai_simulator_reply {
++                ui.add_space(8.0);
++                theme::text(
++                    ui,
++                    crate::i18n::gettext(app.locale, "Draft preview"),
++                    theme::medium(12.5),
++                    palette.secondary,
++                );
++                theme::paragraph(ui, reply, theme::regular(13.0), palette.text);
++            }
++            ui.add_space(6.0);
++        },
++    );
++
+     let mut system = Section::new(translated(locale, "System"));
+     // A closed Mac app stays in the Dock, which brings its window back, so
+     // on macOS the same setting decides only the menu-bar item.
+@@ -909,6 +1310,7 @@ fn sections(app: &App) -> Vec<Section> {
+         chats,
+         notifications,
+         privacy,
++        ai,
+         system,
+         account_section,
+         files,
+@@ -1930,6 +2332,7 @@ fn account_toggle(
+     label: &str,
+     description: &str,
+     field: impl Fn(&mut crate::settings::AccountSettings) -> &mut bool,
++    sync_keep_deleted_messages: bool,
+ ) {
+     let palette = app.palette;
+     let mut value = *field(&mut app.account_mut().settings);
+@@ -1945,6 +2348,13 @@ fn account_toggle(
+     if changed {
+         *field(&mut app.account_mut().settings) = value;
+         app.account_mut().mark_settings_dirty();
++        if sync_keep_deleted_messages {
++            let keep_deleted_messages = app.account().settings.keep_deleted_messages;
++            app.backend
++                .send(crate::backend::Command::SetKeepDeletedMessages(
++                    keep_deleted_messages,
++                ));
++        }
+     }
+ }
+ 
+diff --git a/src/ui/widgets.rs b/src/ui/widgets.rs
+index 4bc3ce7..f0128d2 100644
+--- a/src/ui/widgets.rs
++++ b/src/ui/widgets.rs
+@@ -395,13 +395,13 @@ pub fn paint_disappearing_badge(ui: &Ui, palette: &Palette, avatar: Rect) {
+     theme::paint_icon(ui, Icon::Timer, rect, size, palette.accent);
+ }
+ 
+-/// Outgoing-message status ticks.
++/// Outgoing-message status mark.
+ pub fn ticks(ui: &Ui, palette: &Palette, rect: Rect, status: Delivery) {
+     ticks_in(ui, palette, rect, status, palette.secondary);
+ }
+ 
+-/// Status ticks with `plain` for the states that are not read or failed,
+-/// for ticks drawn over a picture.
++/// Status mark with `plain` for states that are not read or failed, for marks
++/// drawn over a picture.
+ pub fn ticks_in(ui: &Ui, palette: &Palette, rect: Rect, status: Delivery, plain: Color32) {
+     let Some(icon) = tick_icon(status) else {
+         return;
+@@ -421,7 +421,8 @@ pub fn tick_icon(status: Delivery) -> Option<Icon> {
+         Delivery::None => return None,
+         Delivery::Pending => Icon::Clock,
+         Delivery::Sent => Icon::DeliveryTick,
+-        Delivery::Delivered | Delivery::Read | Delivery::Played => Icon::DeliveryTicks,
++        Delivery::Delivered | Delivery::Read => Icon::DeliveryTicks,
++        Delivery::Played => Icon::Volume2,
+         Delivery::Failed => Icon::CircleAlert,
+     })
+ }
+@@ -2466,14 +2467,15 @@ mod tests {
+         assert_eq!(reach(&below, |v| v.pos.y), reach(&beside, |v| v.pos.x));
+     }
+ 
+-    /// Sent shows one tick and delivered or read two, drawn from our own
+-    /// glyphs, where the second tick reaches as high as the first (#249).
++    /// Sent shows one tick, delivered/read show two, and played is distinct
++    /// so a voice message's playback receipt is visible without opening info.
+     #[test]
+     fn delivery_ticks_are_our_own_equal_height_glyphs() {
+         assert_eq!(tick_icon(Delivery::Sent), Some(Icon::DeliveryTick));
+-        for status in [Delivery::Delivered, Delivery::Read, Delivery::Played] {
++        for status in [Delivery::Delivered, Delivery::Read] {
+             assert_eq!(tick_icon(status), Some(Icon::DeliveryTicks));
+         }
++        assert_eq!(tick_icon(Delivery::Played), Some(Icon::Volume2));
+         assert_eq!(tick_icon(Delivery::None), None);
+         let svg = include_str!("../../assets/icons/delivery-ticks.svg");
+         let tops: Vec<(f32, f32)> = svg

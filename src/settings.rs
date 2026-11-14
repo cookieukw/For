@@ -476,6 +476,15 @@ pub struct Settings {
     pub reaction_emoji: Vec<(String, u32)>,
     /// User GIPHY API key. Empty uses the optional built-in key.
     pub giphy_key: String,
+    /// AI provider used for user-requested reply drafts.
+    pub ai_provider: crate::ai::AiProvider,
+    /// Base URL for a loopback OpenAI-compatible model server.
+    pub ai_endpoint: String,
+    /// Model name reported by the selected provider.
+    pub ai_model: String,
+    /// Maximum context messages sent with an AI draft; `None` uses all locally
+    /// archived messages up to the latest incoming message.
+    pub ai_context_messages: Option<usize>,
     /// Keep the app linked in the tray when the window closes. On macOS,
     /// where a closed ZapFast always stays in the Dock, whether it has a
     /// menu-bar item.
@@ -579,6 +588,10 @@ impl Default for Settings {
             recent_emoji: Vec::new(),
             reaction_emoji: Vec::new(),
             giphy_key: String::new(),
+            ai_endpoint: "http://localhost:11434/v1".into(),
+            ai_provider: crate::ai::AiProvider::Local,
+            ai_model: String::new(),
+            ai_context_messages: Some(1),
             keep_running_in_background: true,
             notifications: true,
             notification_content: true,
@@ -818,16 +831,31 @@ impl Settings {
     }
 }
 
+/// AI draft preferences for one direct chat.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct AiChatSettings {
+    pub enabled: bool,
+    pub style: String,
+}
+
 /// Preferences that belong to one WhatsApp account.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct AccountSettings {
     pub send_read_receipts: bool,
+    pub defer_read_receipts_until_send: bool,
     pub send_typing: bool,
     #[serde(alias = "auto_download_images")]
     pub auto_download: bool,
     pub last_chat: Option<String>,
     pub notifications: bool,
+    pub channel_notifications: bool,
+    pub keep_deleted_messages: bool,
+    /// Sender ids hidden in the named group, never account-wide blocks.
+    pub ignored_group_senders: std::collections::HashMap<String, Vec<String>>,
+    /// AI reply drafting is opt-in for each direct chat.
+    pub ai_chats: std::collections::HashMap<String, AiChatSettings>,
     /// Which chats notify once, then stay quiet for ten minutes.
     pub limit_notifications: NotificationLimit,
     pub save_contacts_to_phone: bool,
@@ -849,10 +877,15 @@ impl Default for AccountSettings {
     fn default() -> Self {
         Self {
             send_read_receipts: true,
+            defer_read_receipts_until_send: true,
             send_typing: true,
             auto_download: true,
             last_chat: None,
             notifications: true,
+            channel_notifications: false,
+            keep_deleted_messages: true,
+            ignored_group_senders: Default::default(),
+            ai_chats: Default::default(),
             limit_notifications: NotificationLimit::Off,
             save_contacts_to_phone: true,
             wallpaper_image: None,
@@ -867,10 +900,15 @@ impl AccountSettings {
     pub fn from_legacy(settings: &Settings) -> Self {
         Self {
             send_read_receipts: settings.send_read_receipts,
+            defer_read_receipts_until_send: true,
             send_typing: settings.send_typing,
             auto_download: settings.auto_download,
             last_chat: settings.last_chat.clone(),
             notifications: settings.notifications,
+            channel_notifications: false,
+            keep_deleted_messages: true,
+            ignored_group_senders: Default::default(),
+            ai_chats: Default::default(),
             limit_notifications: NotificationLimit::Off,
             save_contacts_to_phone: settings.save_contacts_to_phone,
             wallpaper_image: settings.wallpaper_image.clone(),

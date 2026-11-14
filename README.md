@@ -19,6 +19,20 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-00a884" alt="MIT license"></a>
 </p>
 
+## Fork features
+
+This fork adds:
+
+- **Delayed read receipts:** read a chat without immediately telling the sender. Receipts are released after a message is successfully sent in that chat.
+- **Recovered deleted messages:** keep incoming messages locally after the sender deletes them, with a visible “deleted by sender” marker.
+- **Channel notification control:** turn desktop notifications for WhatsApp Channels on or off.
+- **Per-group ignore:** hide one member's messages and media in a single group without blocking them on WhatsApp.
+- **Better group info:** search members, scroll a taller member list, and collapse long group descriptions.
+- **In-app WhatsApp links:** open valid `wa.me` and `api.whatsapp.com/send` links in their chat instead of a browser; shared text stays an unsent draft.
+- **AI drafts:** opt in per direct chat, choose a writing style and how many recent messages to include (or all locally archived messages). Drafts are reviewed before you send them.
+
+Choose OpenAI, DeepSeek, Anthropic, Gemini, OpenRouter, or a loopback server such as Ollama or LM Studio in **Settings → AI drafts**. Provider API keys are stored in the OS keyring. For a hosted provider, the selected context is sent only when you request a draft; read its privacy policy before use. Configure the context size in AI settings: the count includes the incoming message being answered, and **All messages** uses all locally archived messages up to it. Enable drafts per contact in that contact's info panel, then choose **Draft reply with AI** from the composer's plus menu. The result appears for review and is never sent automatically. The simulator uses synthetic text only. Other controls are in **Settings → Notifications**, **Settings → Privacy**, and the group's member options. Patches live in [`patches/`](patches/).
+
 ZapFast is a WhatsApp client written in Rust with
 [egui](https://www.egui.rs) and [fastframe](https://fastframe.dev), the
 framework behind a family of native desktop apps. It links to your phone as a

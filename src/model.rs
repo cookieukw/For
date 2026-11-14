@@ -3433,6 +3433,36 @@ pub enum Action {
     /// Turns one account's desktop notifications on or off, from the account
     /// switcher, without showing that account. It stays linked either way.
     SetAccountNotifications(AccountId, bool),
+    /// Ignores one sender only in the named group, without blocking the
+    /// WhatsApp contact account-wide.
+    SetGroupSenderIgnored {
+        chat: ChatId,
+        sender: String,
+        ignored: bool,
+    },
+    /// Requests a draft for the latest incoming message in one enabled direct
+    /// chat, with the configured amount of local conversation context.
+    DraftAiReply(ChatId),
+    /// Tests the local model with the synthetic simulator text.
+    TestAiSimulator,
+    /// Refreshes the model list from the selected AI provider.
+    RefreshAiModels,
+    /// Sets how many recent conversation messages an AI draft may use.
+    SetAiContextMessages(Option<usize>),
+    /// Enables or disables local AI drafts for one direct chat.
+    SetAiChatEnabled {
+        chat: ChatId,
+        enabled: bool,
+    },
+    /// Changes the writing style used for this contact's drafts.
+    SetAiChatStyle {
+        chat: ChatId,
+        style: String,
+    },
+    /// Copies a generated draft into the composer for review.
+    UseAiSuggestion,
+    /// Discards a generated draft without sending it.
+    DiscardAiSuggestion,
     /// Mutes until Unix time, indefinitely with `Some(0)`, or unmutes with `None`.
     SetMuted(ChatId, Option<i64>),
     /// Moves a chat into or out of the locked folder.

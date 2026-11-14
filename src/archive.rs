@@ -19,6 +19,16 @@ pub use calls::CALL_LOG_LIMIT;
 mod drafts;
 mod encryption;
 pub use encryption::{archive_key_identity, copy_archive_key, forget_archive_key};
+
+/// Stores or removes one AI provider's credential in the OS keyring.
+pub fn store_ai_api_key(provider: &str, value: &str) -> anyhow::Result<()> {
+    encryption::store_ai_key(provider, value)
+}
+
+/// Reads one AI provider's credential from the OS keyring.
+pub fn ai_api_key(provider: &str) -> anyhow::Result<Option<zeroize::Zeroizing<String>>> {
+    encryption::ai_key(provider)
+}
 mod favorites;
 pub use favorites::Favorite;
 mod labels;
@@ -104,6 +114,14 @@ CREATE TABLE IF NOT EXISTS messages (
     raw BLOB,
     PRIMARY KEY (chat, id)
 );
+CREATE TABLE IF NOT EXISTS recovered_messages (
+    chat TEXT NOT NULL,
+    id TEXT NOT NULL,
+    PRIMARY KEY (chat, id)
+);
+CREATE TRIGGER IF NOT EXISTS delete_recovered_message AFTER DELETE ON messages BEGIN
+    DELETE FROM recovered_messages WHERE chat = OLD.chat AND id = OLD.id;
+END;
 CREATE INDEX IF NOT EXISTS messages_by_time ON messages (chat, timestamp);
 CREATE TABLE IF NOT EXISTS motion_clips (
     chat TEXT NOT NULL,
@@ -1263,6 +1281,11 @@ impl Archive {
                 broadcast_list = COALESCE(messages.broadcast_list, excluded.broadcast_list)",
             params![lid_chat, phone_chat],
         )?;
+        transaction.execute(
+            "INSERT OR IGNORE INTO recovered_messages (chat, id)
+             SELECT ?2, id FROM recovered_messages WHERE chat = ?1",
+            params![lid_chat, phone_chat],
+        )?;
         Self::move_message_metadata(&transaction, &lid_chat, &phone_chat)?;
         self.settle_duplicates(&phone_chat, copies, Reactions::Kept)?;
         transaction.execute(
@@ -1451,8 +1474,18 @@ impl Archive {
             .iter()
             .any(|copy| matches!(copy.content, Some(Content::Revoked)))
         {
-            if !matches!(kept, Content::Revoked) {
-                self.set_content(chat, id, &Content::Revoked, false)?;
+            if matches!(kept, Content::Revoked)
+                && let Some(original) = copies.iter().find(|copy| {
+                    copy.content
+                        .as_ref()
+                        .is_some_and(|content| !matches!(content, Content::Revoked))
+                })
+            {
+                self.connection.execute(
+                    "UPDATE messages SET content = ?3, edited = ?4
+                     WHERE chat = ?1 AND id = ?2",
+                    params![chat, id, original.json, original.edited],
+                )?;
             }
             return Ok(());
         }
@@ -2669,8 +2702,35 @@ impl Archive {
         if matches!(content, Content::Revoked) {
             // Deleted for everyone: the message is gone, so its pin is too.
             self.delete_pin(chat, id)?;
+            self.clear_recovered_message(chat, id)?;
         }
         Ok(changed > 0)
+    }
+
+    /// Records that an incoming message's original body was kept after its
+    /// sender revoked it for everyone.
+    pub fn mark_recovered_message(&self, chat: &str, id: &str) -> Result<bool> {
+        Ok(self.connection.execute(
+            "INSERT OR IGNORE INTO recovered_messages (chat, id) VALUES (?1, ?2)",
+            params![chat, id],
+        )? > 0)
+    }
+
+    /// Removes the local revoke marker when the message itself is removed.
+    pub fn clear_recovered_message(&self, chat: &str, id: &str) -> Result<bool> {
+        Ok(self.connection.execute(
+            "DELETE FROM recovered_messages WHERE chat = ?1 AND id = ?2",
+            params![chat, id],
+        )? > 0)
+    }
+
+    /// Incoming messages whose original body was retained after a revoke.
+    pub fn recovered_messages(&self) -> Result<Vec<(String, String)>> {
+        let mut statement = self
+            .connection
+            .prepare("SELECT chat, id FROM recovered_messages ORDER BY chat, id")?;
+        let rows = statement.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?;
+        rows.collect()
     }
 
     /// Replaces an edited body and its mention metadata in one write.
@@ -3531,6 +3591,28 @@ pub(crate) mod tests {
                 .unwrap()
                 .is_empty()
         );
+    }
+
+    #[test]
+    fn a_recovered_message_marker_is_stored_and_cleared_with_its_content() {
+        let archive = Archive::in_memory().unwrap();
+        let chat = "1@s.whatsapp.net";
+        archive.ensure_chat(chat, "Fixture").unwrap();
+        archive
+            .insert_message(&message(chat, "recovered", 100, false), None)
+            .unwrap();
+
+        assert!(archive.mark_recovered_message(chat, "recovered").unwrap());
+        assert!(!archive.mark_recovered_message(chat, "recovered").unwrap());
+        assert_eq!(
+            archive.recovered_messages().unwrap(),
+            vec![(chat.to_owned(), "recovered".to_owned())]
+        );
+
+        archive
+            .set_content(chat, "recovered", &Content::Revoked, false)
+            .unwrap();
+        assert!(archive.recovered_messages().unwrap().is_empty());
     }
 
     #[test]
@@ -5898,7 +5980,7 @@ pub(crate) mod tests {
         );
         assert_eq!(
             archive.message(phone, "gone").unwrap().unwrap().content,
-            Content::Revoked
+            Content::text("Hello fixture")
         );
     }
     /// A privacy-id chat and its phone-number chat, each holding message

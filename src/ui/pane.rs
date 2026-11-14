@@ -322,7 +322,21 @@ fn search(app: &mut App, ui: &mut egui::Ui, overlay: bool) {
         return;
     }
     // Taken for the frame rather than cloned: the rows only push actions.
-    let hits = std::mem::take(&mut app.chat_search_hits);
+    let ignored: std::collections::HashSet<(String, String)> = app
+        .account()
+        .settings
+        .ignored_group_senders
+        .iter()
+        .flat_map(|(chat, senders)| {
+            senders
+                .iter()
+                .map(move |sender| (chat.clone(), sender.clone()))
+        })
+        .collect();
+    let hits: Vec<_> = std::mem::take(&mut app.chat_search_hits)
+        .into_iter()
+        .filter(|message| !ignored.contains(&(message.chat.clone(), message.sender.clone())))
+        .collect();
     let query = app.chat_search.trim().to_owned();
     egui::ScrollArea::vertical()
         .id_salt("chat-search-hits")

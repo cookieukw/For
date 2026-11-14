@@ -1511,6 +1511,17 @@ fn composer(app: &mut App, ui: &mut egui::Ui, chat: &Chat, review_send: Option<b
             // An upload already under way stays cancellable while messages are
             // selected or if the chat turns read-only.
             upload_strips(app, ui, &chat.id);
+            if app.ai_draft_pending_for(&chat.id) {
+                ai_draft_pending_strip(app, ui);
+            }
+            let ai_suggestion = app
+                .ai_suggestion
+                .as_ref()
+                .filter(|(target, _)| target == &chat.id)
+                .map(|(_, text)| text.clone());
+            if let Some(suggestion) = ai_suggestion {
+                ai_suggestion_strip(app, ui, &suggestion);
+            }
             if let Some((selected_chat, selected)) = app.selection.clone()
                 && selected_chat == chat.id
             {
@@ -1744,7 +1755,33 @@ fn composer(app: &mut App, ui: &mut egui::Ui, chat: &Chat, review_send: Option<b
                     ))
                     .tab_stop(Stop::Attach);
                     composer_tools_menu(app, chat, &tools);
-                    // Plus and emoji sit close together, as a pair.
+                    let ai_enabled = !chat.is_group()
+                        && !chat.is_channel()
+                        && app
+                            .account()
+                            .settings
+                            .ai_chats
+                            .get(&chat.id)
+                            .is_some_and(|settings| settings.enabled);
+                    if ai_enabled {
+                        ui.add_space(COMPOSER_PAIR_GAP - ui.spacing().item_spacing.x);
+                        let draft = crate::i18n::gettext(app.locale, "Draft reply with AI");
+                        let response = last_line(ui, line, |ui| {
+                            theme::icon_button(
+                                ui,
+                                Icon::MessageCircle,
+                                22.0,
+                                palette.accent,
+                                palette.text,
+                                &draft,
+                            )
+                        })
+                        .tab_stop(Stop::AiDraft);
+                        if response.clicked() {
+                            app.actions.push(Action::DraftAiReply(chat.id.clone()));
+                        }
+                    }
+                    // The plus, optional AI action, and emoji sit close together.
                     ui.add_space(COMPOSER_PAIR_GAP - ui.spacing().item_spacing.x);
                     let smile = last_line(ui, line, |ui| theme::icon_button(
                         ui,
@@ -2260,6 +2297,57 @@ fn composer_pill(palette: &Palette) -> Frame {
         })
 }
 
+fn ai_suggestion_strip(app: &mut App, ui: &mut egui::Ui, suggestion: &str) {
+    let palette = app.palette;
+    let label = crate::i18n::gettext(app.locale, "AI draft");
+    let use_draft = crate::i18n::gettext(app.locale, "Use draft");
+    let discard = crate::i18n::gettext(app.locale, "Discard draft");
+    widgets::raised(ui, &palette, strip_frame(&palette), |ui| {
+        ui.set_width(ui.available_width());
+        ui.horizontal(|ui| {
+            theme::icon(ui, Icon::MessageCircle, 15.0, palette.accent);
+            theme::text(ui, label.as_ref(), theme::semibold(12.5), palette.text);
+            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                if theme::soft_button(ui, &palette, Some(Icon::X), &discard, false).clicked() {
+                    app.actions.push(Action::DiscardAiSuggestion);
+                }
+                if theme::soft_button(ui, &palette, Some(Icon::Check), &use_draft, false).clicked()
+                {
+                    app.actions.push(Action::UseAiSuggestion);
+                }
+            });
+        });
+        let line = widgets::line(
+            ui,
+            suggestion,
+            theme::regular(12.5),
+            palette.secondary,
+            ui.available_width(),
+            2,
+        );
+        let (rect, _) = ui.allocate_exact_size(line.size(), Sense::hover());
+        line.paint(ui, rect.min, palette.secondary);
+    });
+    strip_gap(ui);
+}
+
+fn ai_draft_pending_strip(app: &App, ui: &mut egui::Ui) {
+    let palette = app.palette;
+    widgets::raised(ui, &palette, strip_frame(&palette), |ui| {
+        ui.set_width(ui.available_width());
+        ui.horizontal(|ui| {
+            theme::spinner(ui, 14.0, palette.accent);
+            theme::text(
+                ui,
+                crate::i18n::gettext(app.locale, "Generating AI reply suggestion…"),
+                theme::regular(12.5),
+                palette.secondary,
+            );
+        });
+    });
+    strip_gap(ui);
+}
+
 /// The plus menu beside the composer: send files, documents or a location,
 /// or create a poll.
 fn composer_tools_menu(app: &mut App, chat: &Chat, plus: &egui::Response) {
@@ -2300,6 +2388,20 @@ fn composer_tools_menu(app: &mut App, chat: &Chat, plus: &egui::Response) {
                 if widgets::menu_item(ui, &app.palette, Some(Icon::ListChecks), &create_poll) {
                     app.actions
                         .push(Action::ShowDialog(Dialog::CreatePoll(chat.id.clone())));
+                }
+                if !chat.is_group()
+                    && !chat.is_channel()
+                    && app
+                        .account()
+                        .settings
+                        .ai_chats
+                        .get(&chat.id)
+                        .is_some_and(|settings| settings.enabled)
+                {
+                    let draft = crate::i18n::gettext(app.locale, "Draft reply with AI");
+                    if widgets::menu_item(ui, &app.palette, Some(Icon::MessageCircle), &draft) {
+                        app.actions.push(Action::DraftAiReply(chat.id.clone()));
+                    }
                 }
             });
     }
@@ -2664,6 +2766,10 @@ struct View<'a> {
     names_or: &'a dyn Fn(&str, Option<&str>) -> String,
     /// Resolves mention names without replacing our name with "You".
     mention_names: &'a dyn Fn(&str) -> String,
+    /// Sender ids hidden only in this group.
+    ignored_group_senders: &'a [String],
+    /// Messages whose original contents were kept after a revoke.
+    recovered_messages: &'a HashSet<(ChatId, String)>,
     avatars: &'a HashMap<String, Option<PathBuf>>,
     contacts: &'a HashMap<String, crate::model::Contact>,
     now: i64,
@@ -3125,6 +3231,13 @@ fn messages(app: &mut App, ui: &mut egui::Ui, chat: &Chat, under: f32) {
         keyboard_navigation: &keyboard_navigation,
         names_or: &names_or,
         mention_names: &mention_names,
+        ignored_group_senders: app
+            .account()
+            .settings
+            .ignored_group_senders
+            .get(&chat.id)
+            .map_or(&[], Vec::as_slice),
+        recovered_messages: &app.account().recovered_messages,
         avatars: &avatars,
         contacts: &app.contacts,
         now: crate::util::now(),
@@ -3469,6 +3582,15 @@ fn messages(app: &mut App, ui: &mut egui::Ui, chat: &Chat, under: f32) {
                     let margin = (viewport.height() * 3.0).max(600.0);
                     for (message_index, message) in conversation.messages.iter().enumerate() {
                         let index = message_index;
+                        if chat.is_group()
+                            && view
+                                .ignored_group_senders
+                                .iter()
+                                .any(|sender| sender == &message.sender)
+                        {
+                            previous = Some(message);
+                            continue;
+                        }
                         // WhatsApp marks every item in a media album with the
                         // same parent id. Only its first item owns a row; the
                         // remaining consecutive items are painted in that row.
@@ -5598,6 +5720,27 @@ fn bubble_frame(
         .show(ui, |ui| {
             ui.set_max_width(max_width);
             ui.spacing_mut().item_spacing.y = 4.0;
+            let recovered = album.map_or_else(
+                || {
+                    view.recovered_messages
+                        .contains(&(message.chat.clone(), message.id.clone()))
+                },
+                |messages| {
+                    messages.iter().any(|message| {
+                        view.recovered_messages
+                            .contains(&(message.chat.clone(), message.id.clone()))
+                    })
+                },
+            );
+            if recovered {
+                ui.horizontal(|ui| {
+                    widgets::chip(
+                        ui,
+                        &palette,
+                        &crate::i18n::gettext(view.locale, "This message was deleted"),
+                    );
+                });
+            }
             if show_sender && view.chat.is_group() {
                 let name = (view.names_or)(&message.sender, message.sender_name.as_deref());
                 let response = widgets::rich_text(
@@ -6694,7 +6837,14 @@ fn status_opens_info(
     if !has_message_info(message) {
         return;
     }
-    let label = crate::i18n::gettext(view.locale, "Message info");
+    let label = crate::i18n::gettext(
+        view.locale,
+        if message.status == Delivery::Played {
+            "Played · Message info"
+        } else {
+            "Message info"
+        },
+    );
     let response = ui.interact(
         status.expand(2.0),
         ui.id().with(("status", &message.id)),
@@ -7109,6 +7259,13 @@ pub(crate) fn list_menu(
         keyboard_navigation: &keyboard_navigation,
         names_or: &names_or,
         mention_names: &mention_names,
+        ignored_group_senders: app
+            .account()
+            .settings
+            .ignored_group_senders
+            .get(&chat.id)
+            .map_or(&[], Vec::as_slice),
+        recovered_messages: &app.account().recovered_messages,
         avatars: &avatars,
         contacts: &app.contacts,
         now: crate::util::now(),
@@ -7497,6 +7654,27 @@ fn context_menu(
             }
         }
         widgets::menu_separator(ui, &palette);
+    }
+    if view.chat.is_group() && !message.from_me {
+        let ignored = view
+            .ignored_group_senders
+            .iter()
+            .any(|sender| sender == &message.sender);
+        let label = if ignored {
+            crate::i18n::gettext(view.locale, "Stop ignoring in this group")
+        } else {
+            crate::i18n::gettext(view.locale, "Ignore in this group")
+        };
+        let ignore = widgets::menu_item_response(ui, &palette, Some(Icon::EyeOff), &label, true);
+        first.get_or_insert(ignore.id);
+        if ignore.clicked() {
+            actions.push(Action::SetGroupSenderIgnored {
+                chat: chat.clone(),
+                sender: message.sender.clone(),
+                ignored: !ignored,
+            });
+            ui.close();
+        }
     }
     if let Some(text) = copyable_text(&message.content)
         && widgets::menu_item(
@@ -12830,6 +13008,8 @@ mod tests {
             keyboard_navigation: &keyboard_navigation,
             names_or: &names_or,
             mention_names: &mention_names,
+            ignored_group_senders: &[],
+            recovered_messages: &app.account().recovered_messages,
             avatars: &avatars,
             contacts: &app.contacts,
             now: 0,

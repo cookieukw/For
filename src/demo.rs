@@ -11192,8 +11192,8 @@ mod tests {
         };
         for (page, permissions, add, link, reset, menus) in [
             ("group-admin", true, true, true, true, true),
-            ("group-info", false, true, true, false, false),
-            ("group-info-locked", false, false, false, false, false),
+            ("group-info", false, true, true, false, true),
+            ("group-info-locked", false, false, false, false, true),
         ] {
             let mut app = app();
             let ctx = egui::Context::default();
@@ -11750,6 +11750,14 @@ mod tests {
                         .group_description = description.map(str::to_owned);
                     let ctx = egui::Context::default();
                     app.attach(&ctx);
+                    if description.is_some_and(|text| !text.is_empty()) {
+                        ctx.data_mut(|data| {
+                            data.insert_temp(
+                                egui::Id::new(("group-description-expanded", SAMPLES[1].id)),
+                                true,
+                            );
+                        });
+                    }
                     let mut shapes = Vec::new();
                     for _ in 0..3 {
                         let mut output = ctx.run_ui(
@@ -11830,6 +11838,12 @@ mod tests {
             .group_description = Some(description.into());
         let ctx = egui::Context::default();
         app.attach(&ctx);
+        ctx.data_mut(|data| {
+            data.insert_temp(
+                egui::Id::new(("group-description-expanded", SAMPLES[1].id)),
+                true,
+            );
+        });
         let draw = |app: &mut App, events| {
             let mut output = ctx.run_ui(
                 egui::RawInput {

@@ -265,7 +265,11 @@ pub enum Command {
     MarkRead {
         chat: ChatId,
         receipts: bool,
+        defer_receipts: bool,
     },
+    /// Controls whether messages revoked by other participants remain in the
+    /// encrypted local archive.
+    SetKeepDeletedMessages(bool),
     /// Marks a chat with nothing pending as unread, here and on the phone.
     MarkUnread(ChatId),
     /// Follows one of our group messages' receipts while "Message info" is
@@ -349,6 +353,19 @@ pub enum Command {
     SearchMessages {
         query: String,
     },
+    /// Stores a provider key in the OS keyring.
+    SetAiApiKey {
+        provider: crate::ai::AiProvider,
+        key: crate::ai::ApiKey,
+    },
+    /// Lists current models from the selected provider.
+    ListAiModels {
+        request: u64,
+        provider: crate::ai::AiProvider,
+        endpoint: String,
+    },
+    /// Drafts one response from one selected message, or from simulator text.
+    DraftAiReply(crate::ai::DraftRequest),
     /// Searches one chat, optionally inside a Unix-second day range.
     SearchChatMessages {
         chat: ChatId,
@@ -1232,6 +1249,24 @@ pub enum Event {
     Labels(Vec<crate::model::Label>),
     /// Unsent text stored for each chat, sent once at startup.
     Drafts(Vec<(ChatId, String)>),
+    /// Result of saving one provider key.
+    AiKeySaved {
+        provider: crate::ai::AiProvider,
+        saved: bool,
+        result: Result<(), String>,
+    },
+    /// Models reported by the selected provider.
+    AiModels {
+        provider: crate::ai::AiProvider,
+        request: u64,
+        models: Result<Vec<String>, String>,
+    },
+    /// A generated draft for a direct chat or the synthetic simulator.
+    AiDraft {
+        request: u64,
+        chat: Option<ChatId>,
+        result: crate::ai::DraftResult,
+    },
     /// The starred messages of one chat, for the mark in the conversation.
     Stars {
         chat: ChatId,
@@ -1295,6 +1330,13 @@ pub enum Event {
         messages: Vec<Message>,
         older: bool,
         complete: bool,
+    },
+    /// A locally retained message was revoked by its sender, or its marker
+    /// was removed with the message.
+    RecoveredMessage {
+        chat: ChatId,
+        message: String,
+        recovered: bool,
     },
     /// History toward a message (`Command::LoadUntil`) that could not be
     /// read, and why. It ends the chat's wait for older history as an empty

@@ -22,6 +22,20 @@ After five seconds without input, the text cursor stays visible without
 blinking; it starts blinking again when you use the window.
 The emoji picker stays open while you choose emoji and closes when you send
 the text.
+
+For a direct chat where AI drafts are enabled in the person's info panel, use
+the message-circle button beside the composer to request a reply suggestion.
+When it is ready, a review strip appears above the composer. **Use draft** puts
+the suggestion into the composer without sending it; **Discard draft** removes
+it. Your existing unsent text is left unchanged.
+In **Settings > AI drafts**, choose how many recent messages to include,
+counting the incoming message being answered, or choose **All messages** to use
+all messages already in ZapFast's local archive up to that point. It does not
+fetch older history from the phone for a draft. A hosted provider receives the
+selected context only when you request a suggestion; check its privacy policy
+before use. The context setting applies to chat drafts, not the synthetic API
+test in Settings.
+
 `*bold*`, `_italic_`, `~strike~`, and ```` ```monospace ```` ```` format
 like WhatsApp, and a message of nothing but emoji shows large. Select text in
 the composer and right-click (or press Shift+F10 while it is focused) for
@@ -899,6 +913,8 @@ most shared links carry, lands in the composer without being sent, so you can
 edit it or add to it before sending. The composer keeps whatever you were
 already typing, and a chat with unsent text of your own keeps it: a template
 never replaces a draft you wrote.
+Clicking a valid `wa.me` or `api.whatsapp.com/send` link in a message opens that
+chat in ZapFast instead of the browser.
 
 A `chat.whatsapp.com` group invite link given to `zapfast` shows the same
 invite as clicking it in a message: the group is looked up, and you choose

@@ -1186,7 +1186,12 @@ fn row_scroll_offset(
 fn results(app: &mut App, ui: &mut egui::Ui) {
     let palette = app.palette;
     let chats: Vec<Chat> = app.visible_chats().into_iter().cloned().collect();
-    let hits: Vec<Message> = app.search_hits.clone();
+    let hits: Vec<Message> = app
+        .search_hits
+        .iter()
+        .filter(|message| !app.ignored_group_sender(&message.chat, &message.sender))
+        .cloned()
+        .collect();
     let contacts: Vec<Contact> = app.matching_contacts().into_iter().cloned().collect();
     let needle = crate::util::search_key(app.search.trim());
     let offer_self = !needle.is_empty()
